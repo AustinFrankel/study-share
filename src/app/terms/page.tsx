@@ -31,10 +31,10 @@ export default function TermsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p>
-                By accessing and using Study Resources ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+                By accessing and using Study Resources (&quot;the Service&quot;), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
               </p>
               <p>
-                These Terms of Service ("Terms") govern your use of our educational resource sharing platform. By creating an account or using our services, you acknowledge that you have read, understood, and agree to be bound by these Terms.
+                These Terms of Service (&quot;Terms&quot;) govern your use of our educational resource sharing platform. By creating an account or using our services, you acknowledge that you have read, understood, and agree to be bound by these Terms.
               </p>
             </CardContent>
           </Card>
@@ -85,7 +85,7 @@ export default function TermsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p>
-                We are committed to maintaining the highest standards of academic integrity. All users must adhere to their institution's honor code and academic policies.
+                We are committed to maintaining the highest standards of academic integrity. All users must adhere to their institution&apos;s honor code and academic policies.
               </p>
               <div>
                 <h4 className="font-semibold mb-2">Our Honor Code:</h4>
@@ -94,12 +94,12 @@ export default function TermsPage() {
                   <li>Respect intellectual property rights of authors and institutions</li>
                   <li>Do not share current exam materials, answer keys, or graded assignments</li>
                   <li>Use shared resources as study aids, not as substitutes for your own work</li>
-                  <li>Give proper attribution when using others' materials</li>
+                  <li>Give proper attribution when using others&apos; materials</li>
                   <li>Report violations of academic integrity when encountered</li>
                 </ul>
               </div>
               <p className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800">
-                <strong>Important:</strong> It is your responsibility to ensure that your use of this platform complies with your institution's academic policies. Violations may result in academic penalties at your school and suspension from our platform.
+                <strong>Important:</strong> It is your responsibility to ensure that your use of this platform complies with your institution&apos;s academic policies. Violations may result in academic penalties at your school and suspension from our platform.
               </p>
             </CardContent>
           </Card>
@@ -187,7 +187,7 @@ export default function TermsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p>
-                The service is provided "as is" without warranties of any kind, either express or implied.
+                The service is provided &quot;as is&quot; without warranties of any kind, either express or implied.
               </p>
               <div>
                 <h4 className="font-semibold mb-2">Service Disclaimers:</h4>
@@ -219,7 +219,7 @@ export default function TermsPage() {
             </CardHeader>
             <CardContent>
               <p>
-                We reserve the right to modify these Terms at any time. Changes will be posted on this page with an updated "Last modified" date. Continued use of the service after changes constitutes acceptance of the new terms. For significant changes, we will provide additional notice through the platform or email.
+                We reserve the right to modify these Terms at any time. Changes will be posted on this page with an updated &quot;Last modified&quot; date. Continued use of the service after changes constitutes acceptance of the new terms. For significant changes, we will provide additional notice through the platform or email.
               </p>
             </CardContent>
           </Card>

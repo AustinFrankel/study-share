@@ -15,13 +15,15 @@ import SetupGuide from '@/components/SetupGuide'
 import { Button } from '@/components/ui/button'
 import { TrendingUp, BookOpen, Users, Star } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export default function Home() {
   const { user } = useAuth()
   const [resources, setResources] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
-  const [schools, setSchools] = useState([])
-  const [subjects, setSubjects] = useState([])
-  const [teachers, setTeachers] = useState([])
+  const [schools, setSchools] = useState<Array<{ id: string; name: string }>>([])
+  const [subjects, setSubjects] = useState<Array<{ id: string; name: string }>>([])
+  const [teachers, setTeachers] = useState<Array<{ id: string; name: string }>>([])
   const [viewedResources, setViewedResources] = useState<string[]>([])
 
   useEffect(() => {
@@ -89,7 +91,7 @@ export default function Home() {
       // Transform the data to flatten tags
       const transformedData = data?.map(resource => ({
         ...resource,
-        tags: resource.tags?.map((rt: { tag: any }) => rt.tag) || []
+        tags: resource.tags?.map((rt: { tag: Record<string, unknown> }) => rt.tag) || []
       })) || []
 
       setResources(transformedData)
@@ -113,32 +115,32 @@ export default function Home() {
         { id: 'demo-ucb', name: 'University of California, Berkeley' },
         { id: 'demo-stanford', name: 'Stanford University' },
         { id: 'demo-mit', name: 'MIT' },
-      ] as any)
+      ])
       setSubjects((subjectsRes.data && subjectsRes.data.length > 0) ? subjectsRes.data : [
         { id: 'sub-math', name: 'Mathematics' },
         { id: 'sub-cs', name: 'Computer Science' },
         { id: 'sub-phys', name: 'Physics' },
-      ] as any)
+      ])
       setTeachers((teachersRes.data && teachersRes.data.length > 0) ? teachersRes.data : [
         { id: 't-1', name: 'Dr. Sarah Johnson' },
         { id: 't-2', name: 'Prof. Michael Chen' },
-      ] as any)
+      ])
     } catch (error) {
       console.error('Error fetching filter options:', error)
       setSchools([
         { id: 'demo-ucb', name: 'University of California, Berkeley' },
         { id: 'demo-stanford', name: 'Stanford University' },
         { id: 'demo-mit', name: 'MIT' },
-      ] as any)
+      ])
       setSubjects([
         { id: 'sub-math', name: 'Mathematics' },
         { id: 'sub-cs', name: 'Computer Science' },
         { id: 'sub-phys', name: 'Physics' },
-      ] as any)
+      ])
       setTeachers([
         { id: 't-1', name: 'Dr. Sarah Johnson' },
         { id: 't-2', name: 'Prof. Michael Chen' },
-      ] as any)
+      ])
     }
   }
 
@@ -182,11 +184,11 @@ export default function Home() {
       // Optimistically update UI in-place
       setResources(prev => prev.map(r => {
         if (r.id !== resourceId) return r
-        const prevUserVote = (r as any).user_vote || 0
+        const prevUserVote = (r as Resource & { user_vote?: number }).user_vote || 0
         const nextUserVote = prevUserVote === value ? 0 : value
         const prevCount = r.vote_count || 0
         const nextCount = prevCount - prevUserVote + nextUserVote
-        return { ...r, vote_count: nextCount, user_vote: nextUserVote } as any
+        return { ...r, vote_count: nextCount, user_vote: nextUserVote }
       }))
 
       // Log activity (best effort)
@@ -225,8 +227,8 @@ export default function Home() {
           .select('path, storage_path')
           .eq('resource_id', resourceId)
         const paths = (fileRows || [])
-          .map((f: any) => f?.path || f?.storage_path)
-          .filter(Boolean)
+          .map((f: { path?: string; storage_path?: string }) => f?.path || f?.storage_path)
+          .filter((path): path is string => Boolean(path))
         if (paths.length > 0) {
           await supabase.storage.from('resources').remove(paths)
         }

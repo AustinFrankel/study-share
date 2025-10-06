@@ -120,12 +120,12 @@ export function extractKeywords(text: string): string[] {
 }
 
 // Score relevance of search results
-export function scoreRelevance(searchQuery: string, item: any): number {
+export function scoreRelevance(searchQuery: string, item: Record<string, unknown>): number {
   let score = 0
   const queryTerms = extractKeywords(searchQuery)
   
   // Check title relevance
-  if (item.title) {
+  if (item.title && typeof item.title === 'string') {
     const titleTerms = extractKeywords(item.title)
     queryTerms.forEach(term => {
       titleTerms.forEach(titleTerm => {
@@ -133,27 +133,28 @@ export function scoreRelevance(searchQuery: string, item: any): number {
       })
     })
   }
-  
+
   // Check class/subject relevance
-  if (item.class?.subject?.name) {
+  const classObj = item.class as { subject?: { name?: string }; school?: { name?: string }; teacher?: { name?: string } } | undefined
+  if (classObj?.subject?.name && typeof classObj.subject.name === 'string') {
     const subjectScore = queryTerms.reduce((acc, term) => {
-      return acc + similarityScore(term, item.class.subject.name) * 2
+      return acc + similarityScore(term, classObj.subject!.name as string) * 2
     }, 0)
     score += subjectScore
   }
-  
+
   // Check school relevance
-  if (item.class?.school?.name) {
+  if (classObj?.school?.name && typeof classObj.school.name === 'string') {
     const schoolScore = queryTerms.reduce((acc, term) => {
-      return acc + similarityScore(term, item.class.school.name)
+      return acc + similarityScore(term, classObj.school!.name as string)
     }, 0)
     score += schoolScore
   }
-  
+
   // Check teacher relevance
-  if (item.class?.teacher?.name) {
+  if (classObj?.teacher?.name && typeof classObj.teacher.name === 'string') {
     const teacherScore = queryTerms.reduce((acc, term) => {
-      return acc + similarityScore(term, item.class.teacher.name)
+      return acc + similarityScore(term, classObj.teacher!.name as string)
     }, 0)
     score += teacherScore
   }

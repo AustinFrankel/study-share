@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { getUserAccessInfo, grantViewsForUpload, grantViewsForAd } from '@/lib/access-gate'
+import { getUserAccessInfo, grantViewsForUpload, grantViewsForAd, UserAccessInfo } from '@/lib/access-gate'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -16,17 +16,9 @@ interface AccessGateProps {
   resourceId?: string
 }
 
-interface AccessInfo {
-  viewsToday: number
-  canView: boolean
-  resetTime: Date
-  requiresAction: boolean
-  actionOptions: ('upload' | 'ad')[]
-}
-
 export default function AccessGate({ onAccessGranted, resourceId }: AccessGateProps) {
   const { user } = useAuth()
-  const [accessInfo, setAccessInfo] = useState<AccessInfo | null>(null)
+  const [accessInfo, setAccessInfo] = useState<UserAccessInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [showAdModal, setShowAdModal] = useState(false)
   const [adWatching, setAdWatching] = useState(false)
@@ -112,8 +104,8 @@ export default function AccessGate({ onAccessGranted, resourceId }: AccessGatePr
     return null // Don't show gate if user can view
   }
 
-  const viewsUsed = accessInfo.viewsToday
-  const maxViews = 5 // Should match ACCESS_GATE_CONFIG.FREE_VIEWS_PER_DAY
+  const viewsUsed = accessInfo.viewsThisMonth
+  const maxViews = accessInfo.maxViewsThisMonth
   const resetIn = formatDistanceToNow(accessInfo.resetTime)
 
   return (

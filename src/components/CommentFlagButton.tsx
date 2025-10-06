@@ -112,7 +112,7 @@ export default function CommentFlagButton({ commentId, className }: CommentFlagB
               Report Submitted
             </h3>
             <p className="text-green-700">
-              Thank you for helping keep our community safe. We'll review this report.
+              Thank you for helping keep our community safe. We&apos;ll review this report.
             </p>
           </div>
         ) : (

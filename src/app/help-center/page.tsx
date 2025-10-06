@@ -88,7 +88,7 @@ export default function HelpCenterPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Why can't I view more resources?</h3>
+                <h3 className="font-semibold text-gray-900 mb-1">Why can&apos;t I view more resources?</h3>
                 <p className="text-gray-600 text-sm">
                   You have 5 free views per month. Upload resources or watch short ads to unlock more views (up to 8 total per month).
                 </p>
@@ -173,7 +173,7 @@ export default function HelpCenterPage() {
             <MessageCircle className="w-12 h-12 text-indigo-600 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Still need help?</h3>
             <p className="text-gray-600 mb-4">
-              Can't find what you're looking for? Our support team is ready to assist you.
+              Can&apos;t find what you&apos;re looking for? Our support team is ready to assist you.
             </p>
             <a
               href="mailto:austinhfrankel@gmail.com"

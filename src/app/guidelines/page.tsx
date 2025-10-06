@@ -53,8 +53,8 @@ export default function GuidelinesPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-gray-600 space-y-2">
-              <p>No copyrighted material you don\'t own or have permission to share.</p>
-              <p>Don\'t include personal data or sensitive information in uploads.</p>
+              <p>No copyrighted material you don&apos;t own or have permission to share.</p>
+              <p>Don&apos;t include personal data or sensitive information in uploads.</p>
             </CardContent>
           </Card>
         </div>

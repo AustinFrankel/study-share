@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,7 @@ const RESOURCE_TYPES: { value: ResourceType; label: string }[] = [
   { value: 'practice_set', label: 'Practice Set' },
 ]
 
-export default function FacetFilters({ schools = [], subjects = [], teachers = [] }: FacetFiltersProps) {
+function FacetFiltersContent({ schools = [], subjects = [], teachers = [] }: FacetFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -402,5 +402,13 @@ export default function FacetFilters({ schools = [], subjects = [], teachers = [
         </div>
       )}
     </div>
+  )
+}
+
+export default function FacetFilters(props: FacetFiltersProps) {
+  return (
+    <Suspense fallback={<div className="h-16 bg-gray-100 rounded-lg animate-pulse" />}>
+      <FacetFiltersContent {...props} />
+    </Suspense>
   )
 }

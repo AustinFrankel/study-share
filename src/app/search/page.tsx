@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Resource } from '@/lib/types'
@@ -11,18 +11,20 @@ import Navigation from '@/components/Navigation'
 import SearchBar from '@/components/SearchBar'
 import FacetFilters from '@/components/FacetFilters'
 import ResourceCard from '@/components/ResourceCard'
-import { Search as SearchIcon } from 'lucide-react'
+import { Search as SearchIcon, Loader2 } from 'lucide-react'
 
-export default function SearchPage() {
+export const dynamic = 'force-dynamic'
+
+function SearchPageContent() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
   const query = searchParams.get('q') || ''
   
   const [resources, setResources] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
-  const [schools, setSchools] = useState([])
-  const [subjects, setSubjects] = useState([])
-  const [teachers, setTeachers] = useState([])
+  const [schools, setSchools] = useState<Array<{ id: string; name: string }>>([])
+  const [subjects, setSubjects] = useState<Array<{ id: string; name: string }>>([])
+  const [teachers, setTeachers] = useState<Array<{ id: string; name: string }>>([])
   const [viewedResources, setViewedResources] = useState<string[]>([])
 
   useEffect(() => {
@@ -79,7 +81,7 @@ export default function SearchPage() {
       // Transform the data to flatten tags
       let transformedData = data?.map(resource => ({
         ...resource,
-        tags: resource.tags?.map((rt: any) => rt.tag) || []
+        tags: resource.tags?.map((rt: { tag: { name: string } }) => rt.tag) || []
       })) || []
 
       // Apply smart search filtering and scoring
@@ -138,7 +140,7 @@ export default function SearchPage() {
             ...resource,
             relevanceScore: scoreRelevance(searchQuery, resource)
           }))
-          .sort((a, b) => (b as any).relevanceScore - (a as any).relevanceScore)
+          .sort((a, b) => (b as Resource & { relevanceScore: number }).relevanceScore - (a as Resource & { relevanceScore: number }).relevanceScore)
       }
 
       setResources(transformedData)
@@ -168,7 +170,7 @@ export default function SearchPage() {
 
         const transformedData = data?.map(resource => ({
           ...resource,
-          tags: resource.tags?.map((rt: any) => rt.tag) || []
+          tags: resource.tags?.map((rt: { tag: { name: string } }) => rt.tag) || []
         })) || []
 
         setResources(transformedData)
@@ -328,7 +330,7 @@ export default function SearchPage() {
                     resource={resource}
                     onVote={handleVote}
                     blurredPreview={!user || (user?.id !== resource.uploader?.id && !viewedResources.includes(resource.id))}
-                    hasBeenViewed={user && viewedResources.includes(resource.id)}
+                    hasBeenViewed={!!user && viewedResources.includes(resource.id)}
                   />
                 ))}
               </div>
@@ -349,5 +351,23 @@ export default function SearchPage() {
         )}
       </main>
     </div>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50">
+        <Navigation />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            <span className="ml-3 text-gray-600">Loading...</span>
+          </div>
+        </main>
+      </div>
+    }>
+      <SearchPageContent />
+    </Suspense>
   )
 }

@@ -178,7 +178,7 @@ export default function CookiesPage() {
                 <ul className="list-disc pl-6 space-y-1">
                   <li>Block or delete cookies through your browser settings</li>
                   <li>Set preferences for third-party cookies</li>
-                  <li>Enable "Do Not Track" requests</li>
+                  <li>Enable &quot;Do Not Track&quot; requests</li>
                   <li>Use private/incognito browsing mode</li>
                 </ul>
               </div>
@@ -224,7 +224,7 @@ export default function CookiesPage() {
             </CardHeader>
             <CardContent>
               <p>
-                We may update this Cookie Policy from time to time to reflect changes in our practices or for legal compliance. Updates will be posted on this page with a revised "Last updated" date. We encourage you to review this policy periodically.
+                We may update this Cookie Policy from time to time to reflect changes in our practices or for legal compliance. Updates will be posted on this page with a revised &quot;Last updated&quot; date. We encourage you to review this policy periodically.
               </p>
             </CardContent>
           </Card>
@@ -236,7 +236,7 @@ export default function CookiesPage() {
             </CardHeader>
             <CardContent>
               <p>
-                If you have questions about our use of cookies or this policy, please contact us through our Help Center. For technical issues with cookies, you can also consult your browser's help documentation.
+                If you have questions about our use of cookies or this policy, please contact us through our Help Center. For technical issues with cookies, you can also consult your browser&apos;s help documentation.
               </p>
             </CardContent>
           </Card>

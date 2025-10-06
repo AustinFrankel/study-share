@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
-import { Resource, Comment, AiDerivative } from '@/lib/types'
+import { Resource, Comment, AiDerivative, User, File as ResourceFile } from '@/lib/types'
 import { getUserAccessInfo, recordResourceView } from '@/lib/access-gate'
 import { logActivity } from '@/lib/activity'
 import Navigation from '@/components/Navigation'
@@ -156,7 +156,7 @@ export default function ResourcePage() {
       // Transform tags and get vote counts
       const transformedResource = {
         ...data,
-        tags: data.tags?.map((rt: any) => rt.tag) || []
+        tags: data.tags?.map((rt: { tag: { name: string } }) => rt.tag) || []
       }
 
       // Get vote counts and user's vote
@@ -214,10 +214,10 @@ export default function ResourcePage() {
       console.log('Comments fetched:', data?.length || 0)
       
       // Aggregate votes and organize comments hierarchically
-      const allComments = (data || []).map((c: any) => {
+      const allComments = (data || []).map((c: Comment & { votes?: Array<{ value: number; voter_id: string }> }) => {
         const votes = Array.isArray(c.votes) ? c.votes : []
-        const count = votes.reduce((s: number, v: any) => s + (v?.value || 0), 0)
-        const userVote = user ? votes.find((v: any) => v?.voter_id === user.id)?.value : undefined
+        const count = votes.reduce((s: number, v: { value?: number; voter_id?: string }) => s + (v?.value || 0), 0)
+        const userVote = user ? votes.find((v: { value?: number; voter_id?: string }) => v?.voter_id === user.id)?.value : undefined
         return { ...c, vote_count: count, user_vote: userVote }
       })
       
@@ -361,7 +361,7 @@ export default function ResourcePage() {
     try {
       if (!isSupabaseConfigured) {
         // Demo mode: update local state only
-        setResource(prev => prev ? { ...prev, user_rating: rating } as any : prev)
+        setResource(prev => prev ? { ...prev, user_rating: rating } as Resource & { user_rating?: number } : prev)
       } else {
         // Upsert ensures rating is saved/updated in one call
         const { error: upsertError } = await supabase
@@ -396,10 +396,10 @@ export default function ResourcePage() {
 
       // Refresh resource to get updated rating
       fetchResource()
-    } catch (error: any) {
+    } catch (error) {
       // Provide detailed error info in dev overlay
       try {
-        console.error('Error rating resource:', error?.message || 'Unknown error')
+        console.error('Error rating resource:', (error as Error)?.message || 'Unknown error')
       } catch {}
       try {
         const { logError } = await import('@/lib/error-logging')
@@ -414,7 +414,7 @@ export default function ResourcePage() {
     if (!user || !body.trim()) return
 
     try {
-      const commentData: any = {
+      const commentData: Record<string, unknown> = {
         resource_id: resourceId,
         author_id: user.id,
         body: body.trim()
@@ -455,7 +455,7 @@ export default function ResourcePage() {
           author_id: user.id,
           body: body.trim(),
           created_at: new Date().toISOString(),
-          author: user as any
+          author: user as User
         } as Comment
       ])
     } catch (error) {
@@ -510,11 +510,11 @@ export default function ResourcePage() {
   // Make handler accessible to CommentThread without changing its public API in many places
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      ;(window as any)._handleCommentVote = handleCommentVote
+      ;(window as Window & { _handleCommentVote?: (commentId: string, value: 1 | -1) => Promise<void> })._handleCommentVote = handleCommentVote
     }
   }, [handleCommentVote])
 
-  const handleSuggestFix = async (itemIndex: number, patches: any[]) => {
+  const handleSuggestFix = async (itemIndex: number, patches: Array<Record<string, unknown>>) => {
     if (!user) return
 
     try {
@@ -534,7 +534,7 @@ export default function ResourcePage() {
     }
   }
 
-  const handleDownload = async (file: any) => {
+  const handleDownload = async (file: ResourceFile) => {
     try {
       const response = await fetch(`/api/file/${file.id}`, {
         method: 'GET',
@@ -560,7 +560,7 @@ export default function ResourcePage() {
     }
   }
 
-  const isTextFile = (file: any) => {
+  const isTextFile = (file: ResourceFile) => {
     return file.mime && (
       file.mime.startsWith('text/') ||
       file.mime === 'application/json' ||
@@ -569,7 +569,7 @@ export default function ResourcePage() {
     )
   }
 
-  const loadTextFileContent = async (file: any) => {
+  const loadTextFileContent = async (file: ResourceFile) => {
     if (textFileContents[file.id] || loadingTextFile[file.id]) return
 
     setLoadingTextFile(prev => ({ ...prev, [file.id]: true }))
@@ -599,8 +599,8 @@ export default function ResourcePage() {
           .select('path, storage_path')
           .eq('resource_id', resourceId)
         const paths = (fileRows || [])
-          .map((f: any) => f?.path || f?.storage_path)
-          .filter(Boolean)
+          .map((f: { path?: string; storage_path?: string }) => f?.path || f?.storage_path)
+          .filter((path): path is string => Boolean(path))
         if (paths.length > 0) {
           await supabase.storage.from('resources').remove(paths)
         }
@@ -860,7 +860,7 @@ export default function ResourcePage() {
               
               <StarRating
                 resourceId={resourceId}
-                currentRating={(resource as any).user_rating}
+                currentRating={(resource as Resource & { user_rating?: number }).user_rating}
                 averageRating={resource.average_rating}
                 ratingCount={resource.rating_count}
                 onRate={user ? handleRate : undefined}
@@ -1158,7 +1158,7 @@ export default function ResourcePage() {
             resourceId={resourceId}
             onAddComment={handleAddComment}
             currentUser={user}
-            // @ts-ignore
+            // @ts-expect-error - onVote is optional but we're passing it here
             onVote={handleCommentVote}
           />
         </div>

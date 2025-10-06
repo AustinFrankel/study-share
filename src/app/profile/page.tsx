@@ -1,16 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+export const dynamic = 'force-dynamic'
+
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { getUserStats, getUserRank } from '@/lib/gamification'
 import { regenerateHandle } from '@/lib/auth'
 import { UserStats } from '@/lib/gamification'
-import { getActivityMessage, getActivityIcon, logActivity, getUserActivity } from '@/lib/activity'
+import { getActivityMessage, getActivityIcon, logActivity, getUserActivity, ActivityAction } from '@/lib/activity'
 import { getUserAccessInfo, grantViewsForAd, ACCESS_GATE_CONFIG } from '@/lib/access-gate'
 import { logError } from '@/lib/error-logging'
 import { supabase } from '@/lib/supabase'
+import { User as UserType, Resource } from '@/lib/types'
 import Navigation from '@/components/Navigation'
 import Leaderboard from '@/components/Leaderboard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,8 +21,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { 
-  User, 
+import {
+  User as UserIcon,
   Trophy, 
   Upload, 
   ThumbsUp, 
@@ -38,24 +41,25 @@ import {
   Eye,
   Edit,
   Save,
-  X
+  X,
+  Loader2
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const { user, refreshUser } = useAuth()
   const searchParams = useSearchParams()
   const targetUserHandle = searchParams.get('user')
-  const [targetUser, setTargetUser] = useState<any>(null)
+  const [targetUser, setTargetUser] = useState<UserType | null>(null)
   const [stats, setStats] = useState<UserStats | null>(null)
   const [rank, setRank] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [regeneratingHandle, setRegeneratingHandle] = useState(false)
   const [handleRegenerated, setHandleRegenerated] = useState(false)
-  const [recentResources, setRecentResources] = useState<any[]>([])
+  const [recentResources, setRecentResources] = useState<Resource[]>([])
   const [activeTab, setActiveTab] = useState<'overview' | 'resources' | 'activity'>('overview')
   const [error, setError] = useState('')
-  const [userActivity, setUserActivity] = useState<any[]>([])
+  const [userActivity, setUserActivity] = useState<Array<{ id: string; action_type: ActivityAction; created_at: string; resource_title?: string; points_change?: number; metadata?: Record<string, unknown> }>>([])
   const [loadingActivity, setLoadingActivity] = useState(false)
   const [editingResource, setEditingResource] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
@@ -63,7 +67,7 @@ export default function ProfilePage() {
   const [editTeacherName, setEditTeacherName] = useState('')
   const [editClassTitle, setEditClassTitle] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
-  const [accessInfo, setAccessInfo] = useState<any>(null)
+  const [accessInfo, setAccessInfo] = useState<{ viewsThisMonth: number; maxViewsThisMonth: number; adsWatchedThisMonth: number; canView: boolean; canWatchAd: boolean } | null>(null)
   const [watchingAd, setWatchingAd] = useState(false)
   
   // Determine if viewing own profile or another user's profile
@@ -181,41 +185,27 @@ export default function ProfilePage() {
       const { data, error } = await supabase
         .from('resources')
         .select(`
-          id,
-          title,
-          type,
-          difficulty,
-          created_at,
+          *,
           class:classes(
-            id,
-            title,
-            school:schools(name),
-            subject:subjects(name),
-            teacher:teachers(name)
+            *,
+            school:schools(*),
+            subject:subjects(*),
+            teacher:teachers(*)
           ),
-          files(id)
+          files(*)
         `)
         .eq('uploader_id', userId)
         .order('created_at', { ascending: false })
         .limit(10)
-      
+
       if (error) {
         console.warn('Complex query failed, falling back to simple data:', error.message)
-        // Return simple data if complex query fails
-        return simpleData.map(resource => ({
-          ...resource,
-          view_count: 0, // Default view count since column might not exist
-          class: { title: 'Unknown Class', school: { name: 'Unknown School' }, subject: { name: 'Unknown Subject' }, teacher: { name: 'Unknown Teacher' } },
-          files: []
-        }))
+        // Return simple data if complex query fails - type assertion needed for fallback
+        return simpleData as Resource[]
       }
-      
+
       console.log('Complex resources found:', data?.length || 0)
-      // Add default view_count to complex query results
-      return (data || []).map(resource => ({
-        ...resource,
-        view_count: 0 // Default view count since column might not exist
-      }))
+      return (data || []) as Resource[]
     } catch (error) {
       logError('Error fetching recent resources', error)
       return []
@@ -355,23 +345,24 @@ export default function ProfilePage() {
       
       // Clear success message after 3 seconds
       setTimeout(() => setError(''), 3000)
-    } catch (e: any) {
+    } catch (e) {
       console.error('Error removing resource:', e)
       
       // Provide more specific error messages
-      if (e?.message?.includes('permission')) {
+      const error = e as Error & { code?: string }
+      if (error?.message?.includes('permission')) {
         setError('Permission denied. You can only delete your own resources.')
-      } else if (e?.message?.includes('not found')) {
+      } else if (error?.message?.includes('not found')) {
         setError('Resource not found. It may have already been deleted.')
-      } else if (e?.code === 'PGRST116') {
+      } else if (error?.code === 'PGRST116') {
         setError('Resource not found or you do not have permission to delete it.')
       } else {
-        setError(`Failed to remove resource: ${e?.message || 'Unknown error'}. Please try again.`)
+        setError(`Failed to remove resource: ${error?.message || 'Unknown error'}. Please try again.`)
       }
     }
   }
 
-  const handleEditResource = (resource: any) => {
+  const handleEditResource = (resource: Resource) => {
     setEditingResource(resource.id)
     setEditTitle(resource.title)
     setEditDifficulty(resource.difficulty || 3)
@@ -428,21 +419,21 @@ export default function ProfilePage() {
       }
 
       // Update local state with all changes
-      setRecentResources(prev => 
-        prev.map(resource => 
-          resource.id === resourceId 
-            ? { 
-                ...resource, 
+      setRecentResources(prev =>
+        prev.map(resource =>
+          resource.id === resourceId
+            ? {
+                ...resource,
                 title: editTitle.trim(),
                 difficulty: editDifficulty,
-                class: {
+                class: resource.class ? {
                   ...resource.class,
-                  title: editClassTitle.trim() || resource.class?.title,
-                  teacher: {
-                    ...resource.class?.teacher,
-                    name: editTeacherName.trim() || resource.class?.teacher?.name
-                  }
-                }
+                  title: editClassTitle.trim() || resource.class.title,
+                  teacher: resource.class.teacher ? {
+                    ...resource.class.teacher,
+                    name: editTeacherName.trim() || resource.class.teacher.name
+                  } : resource.class.teacher
+                } : resource.class
               }
             : resource
         )
@@ -500,10 +491,10 @@ export default function ProfilePage() {
         <Navigation />
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
           <div className="text-center">
-            <User className="h-12 w-12 mx-auto text-gray-400" />
+            <UserIcon className="h-12 w-12 mx-auto text-gray-400" />
             <h2 className="mt-2 text-lg font-medium text-gray-900">User Not Found</h2>
             <p className="mt-1 text-sm text-gray-500">
-              The user profile you're looking for doesn't exist.
+              The user profile you&apos;re looking for doesn&apos;t exist.
             </p>
           </div>
         </main>
@@ -517,7 +508,7 @@ export default function ProfilePage() {
         <Navigation />
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
           <div className="text-center">
-            <User className="h-12 w-12 mx-auto text-gray-400" />
+            <UserIcon className="h-12 w-12 mx-auto text-gray-400" />
             <h2 className="mt-2 text-lg font-medium text-gray-900">Profile</h2>
             <p className="mt-1 text-sm text-gray-500">
               Please sign in to view your profile.
@@ -627,7 +618,7 @@ export default function ProfilePage() {
       
       setError('Ad watched successfully! You gained 1 additional view.')
       setTimeout(() => setError(''), 3000)
-    } catch (error: any) {
+    } catch (error) {
       logError('Error watching ad', error)
       setError('Failed to watch ad. Please try again.')
     } finally {
@@ -671,13 +662,13 @@ export default function ProfilePage() {
         <div className="mb-6 border-b border-gray-200">
           <div className="flex space-x-8">
             {[
-              { id: 'overview', name: 'Overview', icon: User },
+              { id: 'overview', name: 'Overview', icon: UserIcon },
               { id: 'resources', name: isOwnProfile ? 'My Resources' : 'Resources', icon: BookOpen },
               ...(isOwnProfile ? [{ id: 'activity', name: 'Activity', icon: Activity }] : [])
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as 'overview' | 'resources' | 'activity')}
                 className={`flex items-center gap-2 pb-4 text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'text-blue-600 border-b-2 border-blue-600'
@@ -710,7 +701,7 @@ export default function ProfilePage() {
                         <div>
                           <h2 className="text-xl font-mono font-semibold">{displayUser?.handle}</h2>
                           <p className="text-sm text-gray-600">
-                            Member since {new Date(displayUser?.created_at).toLocaleDateString()}
+                            Member since {displayUser?.created_at ? new Date(displayUser.created_at).toLocaleDateString() : 'Unknown'}
                           </p>
                         </div>
                       </div>
@@ -1009,7 +1000,7 @@ export default function ProfilePage() {
                             <div className="text-right text-sm text-gray-500">
                               <div className="flex items-center gap-2">
                                 <Eye className="w-4 h-4" />
-                                <span>{resource.view_count || 0} views</span>
+                                <span>{(resource as Resource & { view_count?: number }).view_count || 0} views</span>
                               </div>
                               <div className="flex items-center gap-2 mt-1">
                                 <Download className="w-4 h-4" />
@@ -1092,7 +1083,7 @@ export default function ProfilePage() {
                                 {new Date(activity.created_at).toLocaleDateString()} at {new Date(activity.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </div>
                             </div>
-                            {activity.points_change !== 0 && (
+                            {activity.points_change !== 0 && activity.points_change !== undefined && (
                               <div className={`text-xs font-medium ${activity.points_change > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                 {activity.points_change > 0 ? '+' : ''}{activity.points_change} point{Math.abs(activity.points_change) !== 1 ? 's' : ''}
                               </div>
@@ -1170,5 +1161,23 @@ export default function ProfilePage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50">
+        <Navigation />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            <span className="ml-3 text-gray-600">Loading...</span>
+          </div>
+        </main>
+      </div>
+    }>
+      <ProfilePageContent />
+    </Suspense>
   )
 }

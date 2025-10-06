@@ -26,7 +26,7 @@ export default function GlobalDropzone() {
 
     const onDragLeave = (e: DragEvent) => {
       // Only hide when leaving the window entirely
-      if ((e as any).relatedTarget === null) {
+      if ((e as DragEvent & { relatedTarget?: EventTarget | null }).relatedTarget === null) {
         setIsDragging(false)
       }
     }

@@ -54,7 +54,7 @@ export default function ResourceCard({
   const [localVote, setLocalVote] = useState<number>(resource.user_vote || 0)
   const [localCount, setLocalCount] = useState<number>(resource.vote_count || 0)
   // Local rating state so stars can be interactive on cards
-  const [localRating, setLocalRating] = useState<number>((resource as any).user_rating || 0)
+  const [localRating, setLocalRating] = useState<number>((resource as Resource & { user_rating?: number }).user_rating || 0)
 
   const handleVote = async (value: 1 | -1) => {
     if (onVote && !votingLoading) {
@@ -117,9 +117,10 @@ export default function ResourceCard({
   const hasVisualPreview = firstImageFile || firstPdfFile
 
   // Compute a friendly uploader label
+  const uploaderExt = resource as Resource & { uploader?: { username?: string; email?: string } }
   const displayHandle = resource.uploader?.handle
-    || (resource as any)?.uploader?.username
-    || ((resource as any)?.uploader?.email ? (resource as any).uploader.email.split('@')[0] : '')
+    || uploaderExt?.uploader?.username
+    || (uploaderExt?.uploader?.email ? uploaderExt.uploader.email.split('@')[0] : '')
     || 'Unknown User'
 
   return (

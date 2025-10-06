@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+export const dynamic = 'force-dynamic'
+
+import { useState, useEffect, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Resource } from '@/lib/types'
 import { useAuth } from '@/contexts/AuthContext'
@@ -11,18 +13,18 @@ import FacetFilters from '@/components/FacetFilters'
 import ResourceCard from '@/components/ResourceCard'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Grid, List, TrendingUp, Clock } from 'lucide-react'
+import { Grid, List, TrendingUp, Clock, Loader2 } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 
-export default function Browse() {
+function BrowseContent() {
   const { user } = useAuth()
   const [resources, setResources] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [sortBy, setSortBy] = useState<'newest' | 'popular'>('newest')
-  const [schools, setSchools] = useState([])
-  const [subjects, setSubjects] = useState([])
-  const [teachers, setTeachers] = useState([])
+  const [schools, setSchools] = useState<Array<{ id: string; name: string }>>([])
+  const [subjects, setSubjects] = useState<Array<{ id: string; name: string }>>([])
+  const [teachers, setTeachers] = useState<Array<{ id: string; name: string; school_id?: string }>>([])
   const [viewedResources, setViewedResources] = useState<string[]>([])
   const searchParams = useSearchParams()
 
@@ -107,12 +109,13 @@ export default function Browse() {
       setResources(transformedData)
     } catch (error) {
       console.error('Error fetching resources:', error)
-      console.error('Error details:', {
-        message: error?.message,
-        stack: error?.stack,
-        name: error?.name,
-        code: error?.code
-      })
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+        })
+      }
     } finally {
       setLoading(false)
     }
@@ -130,32 +133,32 @@ export default function Browse() {
         { id: 'demo-ucb', name: 'University of California, Berkeley' },
         { id: 'demo-stanford', name: 'Stanford University' },
         { id: 'demo-mit', name: 'MIT' },
-      ] as any)
+      ])
       setSubjects((subjectsRes.data && subjectsRes.data.length > 0) ? subjectsRes.data : [
         { id: 'sub-math', name: 'Mathematics' },
         { id: 'sub-cs', name: 'Computer Science' },
         { id: 'sub-phys', name: 'Physics' },
-      ] as any)
+      ])
       setTeachers((teachersRes.data && teachersRes.data.length > 0) ? teachersRes.data : [
         { id: 't-1', name: 'Dr. Sarah Johnson', school_id: 'demo-ucb' },
         { id: 't-2', name: 'Prof. Michael Chen', school_id: 'demo-stanford' },
-      ] as any)
+      ])
     } catch (error) {
       console.error('Error fetching filter options:', error)
       setSchools([
         { id: 'demo-ucb', name: 'University of California, Berkeley' },
         { id: 'demo-stanford', name: 'Stanford University' },
         { id: 'demo-mit', name: 'MIT' },
-      ] as any)
+      ])
       setSubjects([
         { id: 'sub-math', name: 'Mathematics' },
         { id: 'sub-cs', name: 'Computer Science' },
         { id: 'sub-phys', name: 'Physics' },
-      ] as any)
+      ])
       setTeachers([
         { id: 't-1', name: 'Dr. Sarah Johnson', school_id: 'demo-ucb' },
         { id: 't-2', name: 'Prof. Michael Chen', school_id: 'demo-stanford' },
-      ] as any)
+      ])
     }
   }
 
@@ -312,7 +315,7 @@ export default function Browse() {
                 onVote={handleVote}
                 compact={viewMode === 'list'}
                 blurredPreview={!user || (user?.id !== resource.uploader?.id && !viewedResources.includes(resource.id))}
-                hasBeenViewed={user && viewedResources.includes(resource.id)}
+                hasBeenViewed={!!user && viewedResources.includes(resource.id)}
               />
             ))}
           </div>
@@ -329,5 +332,23 @@ export default function Browse() {
         )}
       </main>
     </div>
+  )
+}
+
+export default function Browse() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50">
+        <Navigation />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            <span className="ml-3 text-gray-600">Loading...</span>
+          </div>
+        </main>
+      </div>
+    }>
+      <BrowseContent />
+    </Suspense>
   )
 }

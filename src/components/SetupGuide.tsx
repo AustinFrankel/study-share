@@ -52,12 +52,12 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here`
               <ol className="list-decimal list-inside space-y-2 text-sm">
                 <li>Go to <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">supabase.com</a></li>
                 <li>Sign up or log in to your account</li>
-                <li>Click "New Project"</li>
+                <li>Click &quot;New Project&quot;</li>
                 <li>Choose your organization</li>
-                <li>Enter project name: "study-resources"</li>
+                <li>Enter project name: &quot;study-resources&quot;</li>
                 <li>Set a database password (save this!)</li>
                 <li>Choose a region close to you</li>
-                <li>Click "Create new project"</li>
+                <li>Click &quot;Create new project&quot;</li>
               </ol>
               <Button asChild className="w-full">
                 <a href="https://supabase.com" target="_blank" rel="noopener noreferrer">
@@ -80,9 +80,9 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here`
               <ol className="list-decimal list-inside space-y-2 text-sm">
                 <li>In your Supabase project dashboard</li>
                 <li>Go to Settings → API</li>
-                <li>Copy the "Project URL"</li>
-                <li>Copy the "anon public" key</li>
-                <li>Copy the "service_role" key (keep this secret!)</li>
+                <li>Copy the &quot;Project URL&quot;</li>
+                <li>Copy the &quot;anon public&quot; key</li>
+                <li>Copy the &quot;service_role&quot; key (keep this secret!)</li>
               </ol>
               <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded">
                 <strong>Note:</strong> The service_role key has admin privileges. Never commit it to version control.

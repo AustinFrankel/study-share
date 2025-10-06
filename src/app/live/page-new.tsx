@@ -398,7 +398,7 @@ export default function LivePage() {
                 <CheckCircle2 className="w-8 h-8 text-green-600" />
               </div>
               <h3 className="font-semibold text-xl mb-3">After Test</h3>
-              <p className="text-gray-600 text-sm">Upload test materials to help others, or view what's been shared by the community</p>
+              <p className="text-gray-600 text-sm">Upload test materials to help others, or view what&apos;s been shared by the community</p>
             </div>
             <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl">
               <div className="inline-block p-4 bg-purple-100 rounded-full mb-4">
@@ -470,7 +470,7 @@ export default function LivePage() {
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                <p className="font-medium mb-1">What you'll get:</p>
+                <p className="font-medium mb-1">What you&apos;ll get:</p>
                 <ul className="list-disc list-inside space-y-1 text-xs">
                   <li>Email reminders before test day</li>
                   <li>Study tips and resources</li>
@@ -506,9 +506,9 @@ export default function LivePage() {
               <div className="inline-block p-4 bg-green-100 rounded-full mb-4">
                 <CheckCircle2 className="w-12 h-12 text-green-600" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">You're on the list!</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">You&apos;re on the list!</h3>
               <p className="text-gray-600 mb-6">
-                We'll send you reminders and resources for {selectedTest?.name}.
+                We&apos;ll send you reminders and resources for {selectedTest?.name}.
               </p>
               <Button
                 onClick={() => {

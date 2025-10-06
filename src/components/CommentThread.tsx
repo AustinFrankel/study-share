@@ -158,8 +158,8 @@ function CommentItem({ comment, currentUser, onReply, onVote, depth = 0 }: Comme
                           variant="ghost"
                           size="sm"
                           className={`p-1 h-7 w-7 rounded-full ${
-                            (comment as any).user_vote === 1 
-                              ? 'text-green-600 bg-green-50 hover:bg-green-100' 
+                            (comment as Comment & { user_vote?: number }).user_vote === 1
+                              ? 'text-green-600 bg-green-50 hover:bg-green-100'
                               : 'hover:text-green-600 hover:bg-green-50'
                           }`}
                           onClick={() => onVote(comment.id, 1)}
@@ -167,18 +167,18 @@ function CommentItem({ comment, currentUser, onReply, onVote, depth = 0 }: Comme
                           <ArrowUp className="w-3 h-3" />
                         </Button>
                         <span className={`text-xs font-medium min-w-[1.5rem] text-center px-2 ${
-                          (comment as any).vote_count > 0 ? 'text-green-600' : 
-                          (comment as any).vote_count < 0 ? 'text-red-600' : 
+                          ((comment as Comment & { vote_count?: number }).vote_count || 0) > 0 ? 'text-green-600' :
+                          ((comment as Comment & { vote_count?: number }).vote_count || 0) < 0 ? 'text-red-600' :
                           'text-gray-600'
                         }`}>
-                          {(comment as any).vote_count || 0}
+                          {(comment as Comment & { vote_count?: number }).vote_count || 0}
                         </span>
                         <Button
                           variant="ghost"
                           size="sm"
                           className={`p-1 h-7 w-7 rounded-full ${
-                            (comment as any).user_vote === -1 
-                              ? 'text-red-600 bg-red-50 hover:bg-red-100' 
+                            (comment as Comment & { user_vote?: number }).user_vote === -1
+                              ? 'text-red-600 bg-red-50 hover:bg-red-100'
                               : 'hover:text-red-600 hover:bg-red-50'
                           }`}
                           onClick={() => onVote(comment.id, -1)}
@@ -306,16 +306,16 @@ export default function CommentThread({
   // Sort comments
   const sortedComments = [...comments].sort((a, b) => {
     if (sortBy === 'most_liked') {
-      const votesA = (a as any).vote_count || 0
-      const votesB = (b as any).vote_count || 0
+      const votesA = (a as Comment & { vote_count?: number }).vote_count || 0
+      const votesB = (b as Comment & { vote_count?: number }).vote_count || 0
       if (votesA !== votesB) return votesB - votesA
       // Secondary sort by newest if votes are equal
       const dateA = new Date(a.created_at).getTime()
       const dateB = new Date(b.created_at).getTime()
       return dateB - dateA
     } else if (sortBy === 'least_liked') {
-      const votesA = (a as any).vote_count || 0
-      const votesB = (b as any).vote_count || 0
+      const votesA = (a as Comment & { vote_count?: number }).vote_count || 0
+      const votesB = (b as Comment & { vote_count?: number }).vote_count || 0
       if (votesA !== votesB) return votesA - votesB
       // Secondary sort by newest if votes are equal
       const dateA = new Date(a.created_at).getTime()
@@ -426,8 +426,7 @@ export default function CommentThread({
             comment={comment}
             currentUser={currentUser}
             onReply={handleReply}
-            // @ts-ignore onVote passed by parent page when available
-            onVote={(window as any)._handleCommentVote}
+            onVote={(window as Window & { _handleCommentVote?: (commentId: string, value: 1 | -1) => Promise<void> })._handleCommentVote}
           />
         ))}
         {topLevelComments.length === 0 && (

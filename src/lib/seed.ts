@@ -164,7 +164,7 @@ export async function seedDatabase() {
 
     // 3. Create users
     console.log('Creating users...')
-    const users = []
+    const users: Array<{ id: string; handle: string; handle_version: number }> = []
     for (let i = 0; i < 10; i++) {
       users.push({
         id: uuidv4(),
@@ -183,7 +183,7 @@ export async function seedDatabase() {
 
     // 4. Create teachers
     console.log('Creating teachers...')
-    const teachers = []
+    const teachers: Array<{ school_id: string; name: string }> = []
     schools.forEach(school => {
       SAMPLE_TEACHERS.slice(0, 3).forEach(teacherName => {
         teachers.push({
@@ -203,7 +203,7 @@ export async function seedDatabase() {
 
     // 5. Create classes
     console.log('Creating classes...')
-    const classes = []
+    const classes: Array<{ school_id: string; subject_id: string; teacher_id: string; title: string; code: string; term: string }> = []
     createdTeachers.forEach(teacher => {
       SAMPLE_CLASSES.slice(0, 3).forEach(classData => {
         const randomSubject = subjects[Math.floor(Math.random() * subjects.length)]
@@ -228,7 +228,7 @@ export async function seedDatabase() {
 
     // 6. Create resources
     console.log('Creating resources...')
-    const resources = []
+    const resources: Array<{ class_id: string; uploader_id: string; type: string; title: string }> = []
     SAMPLE_RESOURCES.forEach((resourceData, index) => {
       const randomClass = createdClasses[index % createdClasses.length]
       const randomUser = createdUsers[index % createdUsers.length]
@@ -283,7 +283,7 @@ export async function seedDatabase() {
 
     // 8. Create votes
     console.log('Creating votes...')
-    const votes = []
+    const votes: Array<{ resource_id: string; voter_id: string; value: number }> = []
     createdResources.forEach(resource => {
       // Random number of votes for each resource
       const numVotes = Math.floor(Math.random() * 10) + 1
@@ -310,7 +310,7 @@ export async function seedDatabase() {
 
     // 9. Create comments
     console.log('Creating comments...')
-    const comments = []
+    const comments: Array<{ resource_id: string; author_id: string; body: string }> = []
     createdResources.forEach(resource => {
       // Random number of comments for each resource
       const numComments = Math.floor(Math.random() * 5) + 1
@@ -337,7 +337,7 @@ export async function seedDatabase() {
 
     // 10. Create points ledger entries
     console.log('Creating points ledger...')
-    const pointsEntries = []
+    const pointsEntries: Array<{ user_id: string; delta: number; reason: string }> = []
     
     // Award points for uploads
     createdUsers.forEach(user => {

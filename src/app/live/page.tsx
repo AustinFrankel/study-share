@@ -402,7 +402,7 @@ export default function LivePage() {
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5 sm:p-3 text-xs sm:text-sm text-blue-800">
-                <p className="font-medium mb-1">What you'll get:</p>
+                <p className="font-medium mb-1">What you&apos;ll get:</p>
                 <ul className="list-disc list-inside space-y-0.5 sm:space-y-1 text-[10px] sm:text-xs">
                   <li>Email reminders before test day</li>
                   <li>Study tips and resources</li>
@@ -438,9 +438,9 @@ export default function LivePage() {
               <div className="inline-block p-3 sm:p-4 bg-green-100 rounded-full mb-3 sm:mb-4">
                 <CheckCircle2 className="w-10 h-10 sm:w-12 sm:h-12 text-green-600" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 px-4">You're on the list!</h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 px-4">You&apos;re on the list!</h3>
               <p className="text-sm sm:text-base text-gray-600 mb-5 sm:mb-6 px-4">
-                We'll send you reminders and resources for {selectedTest?.name}.
+                We&apos;ll send you reminders and resources for {selectedTest?.name}.
               </p>
               <Button
                 onClick={() => {

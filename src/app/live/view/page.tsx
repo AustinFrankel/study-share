@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+export const dynamic = 'force-dynamic'
+
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,7 +20,7 @@ interface Problem {
   imageUrl?: string
 }
 
-export default function LiveViewPage() {
+function LiveViewContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuth()
@@ -68,7 +70,7 @@ export default function LiveViewPage() {
     }
   }
 
-  const parseProblems = (data: any): Problem[] => {
+  const parseProblems = (data: { upload_type: string; content?: string; image_urls?: string[] }): Problem[] => {
     const problems: Problem[] = []
 
     if (data.upload_type === 'text' && data.content) {
@@ -219,7 +221,7 @@ export default function LiveViewPage() {
           <AlertCircle className="w-16 h-16 mx-auto text-yellow-500 mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">No Content Available Yet</h2>
           <p className="text-gray-600 mb-6">
-            Test materials for {testName} haven't been uploaded yet. Check back soon!
+            Test materials for {testName} haven&apos;t been uploaded yet. Check back soon!
           </p>
           <Button onClick={() => router.push('/live')}>
             Back to Live Tests
@@ -462,5 +464,21 @@ export default function LiveViewPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+export default function LiveViewPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+        <Navigation />
+        <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-indigo-600" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <LiveViewContent />
+    </Suspense>
   )
 }

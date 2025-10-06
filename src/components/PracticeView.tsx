@@ -11,7 +11,7 @@ import { StructuredContent } from '@/lib/types'
 
 interface PracticeViewProps {
   structured: StructuredContent
-  onSuggestFix?: (itemIndex: number, patch: unknown[]) => void
+  onSuggestFix?: (itemIndex: number, patch: Array<Record<string, unknown>>) => void | Promise<void>
   className?: string
 }
 
@@ -85,8 +85,8 @@ export default function PracticeView({ structured, onSuggestFix, className }: Pr
       })
     }
 
-    if (editValues.choices && item.choices) {
-      editValues.choices.forEach((choice: string, choiceIndex: number) => {
+    if (editValues.choices && item.choices && Array.isArray(editValues.choices)) {
+      (editValues.choices as string[]).forEach((choice: string, choiceIndex: number) => {
         if (choice !== item.choices![choiceIndex]) {
           patches.push({
             op: 'replace',
@@ -198,7 +198,7 @@ export default function PracticeView({ structured, onSuggestFix, className }: Pr
               <div>
                 {editingItem === index ? (
                   <Textarea
-                    value={editValues.prompt}
+                    value={(editValues.prompt as string) || ''}
                     onChange={(e) => setEditValues(prev => ({ ...prev, prompt: e.target.value }))}
                     className="font-medium"
                     rows={3}
@@ -226,9 +226,9 @@ export default function PracticeView({ structured, onSuggestFix, className }: Pr
                       {editingItem === index ? (
                         <input
                           type="text"
-                          value={editValues.choices?.[choiceIndex] || choice}
+                          value={(editValues.choices as string[])?.[choiceIndex] || choice}
                           onChange={(e) => {
-                            const newChoices = [...(editValues.choices || item.choices)]
+                            const newChoices = [...((editValues.choices as string[]) || item.choices!)]
                             newChoices[choiceIndex] = e.target.value
                             setEditValues(prev => ({ ...prev, choices: newChoices }))
                           }}
@@ -279,7 +279,7 @@ export default function PracticeView({ structured, onSuggestFix, className }: Pr
                     <div className="font-medium text-green-800 mb-1">Correct Answer:</div>
                     {editingItem === index ? (
                       <Textarea
-                        value={editValues.answer}
+                        value={(editValues.answer as string) || ''}
                         onChange={(e) => setEditValues(prev => ({ ...prev, answer: e.target.value }))}
                         className="bg-white"
                         rows={2}
@@ -294,7 +294,7 @@ export default function PracticeView({ structured, onSuggestFix, className }: Pr
                     <div className="font-medium text-blue-800 mb-1">Explanation:</div>
                     {editingItem === index ? (
                       <Textarea
-                        value={editValues.explanation}
+                        value={(editValues.explanation as string) || ''}
                         onChange={(e) => setEditValues(prev => ({ ...prev, explanation: e.target.value }))}
                         className="bg-white"
                         rows={3}

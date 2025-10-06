@@ -35,8 +35,8 @@ export async function POST(request: Request) {
   console.log('Auth setup - Bearer token present:', !!bearerToken)
   console.log('Service key available:', !!supabaseServiceKey)
 
-  let authClient: any
-  let user: any = null
+  let authClient: ReturnType<typeof createClient> | ReturnType<typeof createServerClient>
+  let user: { id: string; email?: string } | null = null
 
   // First, authenticate the user to ensure they're legitimate
   if (bearerToken) {
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
             cookieStore.set(name, value, options)
           },
           remove(name: string, options: CookieOptions) {
-            cookieStore.delete(name, options)
+            cookieStore.delete(name)
           },
         },
       }
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
   }
 
   // Now use service role key for database operations (bypasses RLS)
-  let dbClient: any
+  let dbClient: ReturnType<typeof createClient> | ReturnType<typeof createServerClient>
   if (supabaseServiceKey) {
     console.log('Using service role key for database operations')
     dbClient = createClient(supabaseUrl, supabaseServiceKey, {

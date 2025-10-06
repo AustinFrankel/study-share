@@ -1,7 +1,7 @@
 // Enhanced error logging utility for Supabase and other errors
-export function logError(context: string, error: any) {
+export function logError(context: string, error: unknown) {
   // Try multiple ways to extract error information
-  const errorInfo: any = {
+  const errorInfo: Record<string, unknown> = {
     context,
     timestamp: new Date().toISOString()
   }
@@ -15,24 +15,26 @@ export function logError(context: string, error: any) {
 
   // Handle Supabase PostgrestError objects
   if (error && typeof error === 'object') {
+    const errorObj = error as Record<string, unknown>
     // Try to extract common Supabase error properties
-    if (error.message) errorInfo.message = error.message
-    if (error.code) errorInfo.code = error.code
-    if (error.details) errorInfo.details = error.details
-    if (error.hint) errorInfo.hint = error.hint
-    if (error.status) errorInfo.status = error.status
-    if (error.statusText) errorInfo.statusText = error.statusText
+    if (errorObj.message) errorInfo.message = errorObj.message
+    if (errorObj.code) errorInfo.code = errorObj.code
+    if (errorObj.details) errorInfo.details = errorObj.details
+    if (errorObj.hint) errorInfo.hint = errorObj.hint
+    if (errorObj.status) errorInfo.status = errorObj.status
+    if (errorObj.statusText) errorInfo.statusText = errorObj.statusText
     
     // Try to get all enumerable properties
     try {
       const keys = Object.keys(error)
       if (keys.length > 0) {
-        errorInfo.properties = {}
+        const properties: Record<string, unknown> = {}
         keys.forEach(key => {
-          errorInfo.properties[key] = error[key]
+          properties[key] = (error as Record<string, unknown>)[key]
         })
+        errorInfo.properties = properties
       }
-    } catch (e) {
+    } catch {
       // Ignore
     }
 
@@ -40,16 +42,17 @@ export function logError(context: string, error: any) {
     try {
       const allProps = Object.getOwnPropertyNames(error)
       if (allProps.length > 0) {
-        errorInfo.allProperties = {}
+        const allProperties: Record<string, unknown> = {}
         allProps.forEach(prop => {
           try {
-            errorInfo.allProperties[prop] = error[prop]
-          } catch (e) {
-            errorInfo.allProperties[prop] = '[Unable to access]'
+            allProperties[prop] = (error as Record<string, unknown>)[prop]
+          } catch {
+            allProperties[prop] = '[Unable to access]'
           }
         })
+        errorInfo.allProperties = allProperties
       }
-    } catch (e) {
+    } catch {
       // Ignore
     }
   }
@@ -57,16 +60,16 @@ export function logError(context: string, error: any) {
   // Try JSON.stringify with error handling
   try {
     errorInfo.stringified = JSON.stringify(error, null, 2)
-  } catch (e) {
+  } catch {
     errorInfo.stringified = '[Unable to stringify]'
   }
 
   // If we still don't have much info, try toString
   if (!errorInfo.message && !errorInfo.code && !errorInfo.details) {
     try {
-      errorInfo.toString = error?.toString?.() || String(error)
-    } catch (e) {
-      errorInfo.toString = '[Unable to convert to string]'
+      errorInfo.toStringValue = (error as { toString?: () => string })?.toString?.() || String(error)
+    } catch {
+      errorInfo.toStringValue = '[Unable to convert to string]'
     }
   }
 

@@ -10,7 +10,7 @@ export const ACCESS_GATE_CONFIG = {
   MAX_VIEWS_WITH_ADS: 8, // Maximum views possible with ads (5 base + 3 ads)
 }
 
-interface UserAccessInfo {
+export interface UserAccessInfo {
   viewsThisMonth: number
   maxViewsThisMonth: number
   adsWatchedThisMonth: number
@@ -99,7 +99,7 @@ export async function getUserAccessInfo(userId: string): Promise<UserAccessInfo>
       requiresAction,
       actionOptions: requiresAction ? (canWatchAd ? ['upload', 'ad'] : ['upload']) : []
     }
-  } catch (error: any) {
+  } catch (error) {
     logError('Error getting user access info', error)
     // Default to allowing access on error
     return {
@@ -231,8 +231,8 @@ export async function grantViewsForUpload(userId: string): Promise<void> {
     // The max views calculation will automatically include this new upload bonus
     // when getUserAccessInfo is called again, so no need to manually update monthly_view_limits
     console.log(`Granted +5 view bonus for user ${userId}. New max will be ${accessInfo.maxViewsThisMonth + 5}`)
-    
-  } catch (error: any) {
+
+  } catch (error) {
     logError('Error granting views for upload', error)
   }
 }
@@ -301,7 +301,7 @@ export async function grantViewsForAd(userId: string): Promise<void> {
     }
 
     console.log('grantViewsForAd completed successfully')
-  } catch (error: any) {
+  } catch (error) {
     logError('Error granting views for ad', error)
     throw error
   }

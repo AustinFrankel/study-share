@@ -49,7 +49,7 @@ export function useNotifications() {
       const notificationList = data || []
       setNotifications(notificationList)
       setUnreadCount(notificationList.filter(n => !n.read).length)
-    } catch (error: any) {
+    } catch (error) {
       logError('Error fetching notifications', error)
     } finally {
       setLoading(false)
@@ -75,7 +75,7 @@ export function useNotifications() {
         )
       )
       setUnreadCount(prev => Math.max(0, prev - 1))
-    } catch (error: any) {
+    } catch (error) {
       logError('Error marking notification as read', error)
     }
   }
@@ -95,7 +95,7 @@ export function useNotifications() {
       // Update local state
       setNotifications(prev => prev.map(n => ({ ...n, read: true })))
       setUnreadCount(0)
-    } catch (error: any) {
+    } catch (error) {
       logError('Error marking all notifications as read', error)
     }
   }

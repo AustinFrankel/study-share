@@ -211,11 +211,13 @@ export async function getUserStats(userId: string): Promise<UserStats> {
 // Get leaderboard data
 export async function getLeaderboard(
   schoolId?: string,
+  // timeframe is currently unused but reserved for future implementation
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   timeframe: 'all' | 'week' | 'month' = 'all',
   limit: number = 10
 ) {
   try {
-    let query = supabase
+    const query = supabase
       .from('user_points')
       .select(
         `user_id, total_points, user:users(handle)`
@@ -236,7 +238,7 @@ export async function getLeaderboard(
       throw error
     }
 
-    return (data as any[])?.map((entry: any, index: number) => {
+    return (data as Array<{ user_id: string; total_points: number; user: { handle?: string } | Array<{ handle?: string }> }>)?.map((entry, index: number) => {
       const joinedUser = entry?.user
       const handle = Array.isArray(joinedUser)
         ? (joinedUser[0]?.handle || null)
@@ -257,10 +259,13 @@ export async function getLeaderboard(
 // Check for new badges after an action
 export async function checkForNewBadges(userId: string): Promise<Badge[]> {
   const stats = await getUserStats(userId)
+  // currentBadgeIds is reserved for future implementation to track which badges are new
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const currentBadgeIds = stats.badges.map(b => b.id)
-  
+
   // This would typically be stored in the database to avoid re-checking
   // For now, we return newly earned badges
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   return stats.badges.filter((badge, index) => {
     // Simple logic to detect "new" badges
     // In production, you'd track which badges have been awarded

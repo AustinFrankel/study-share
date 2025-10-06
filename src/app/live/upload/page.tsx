@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,9 +12,11 @@ import { Upload, Lock, FileText, Image as ImageIcon, CheckCircle2, Loader2 } fro
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 
+export const dynamic = 'force-dynamic'
+
 const UPLOAD_PASSWORD = 'Austin11!'
 
-export default function LiveUploadPage() {
+function LiveUploadContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuth()
@@ -52,7 +54,7 @@ export default function LiveUploadPage() {
     setError('')
 
     try {
-      const uploadData: any = {
+      const uploadData: Record<string, unknown> = {
         test_id: testId,
         test_name: testName,
         uploader_id: user?.id || null,
@@ -89,9 +91,9 @@ export default function LiveUploadPage() {
               .getPublicUrl(filePath)
 
             imageUrls.push(publicUrl)
-          } catch (storageError: any) {
+          } catch (storageError) {
             console.error('Storage error:', storageError)
-            throw new Error(`Storage error for ${file.name}: ${storageError.message || 'Unknown error'}`)
+            throw new Error(`Storage error for ${file.name}: ${(storageError as Error).message || 'Unknown error'}`)
           }
         }
 
@@ -117,14 +119,15 @@ export default function LiveUploadPage() {
         setTimeout(() => {
           router.push(`/live/view?test=${testId}&name=${encodeURIComponent(testName || '')}`)
         }, 2000)
-      } catch (dbErr: any) {
+      } catch (dbErr) {
         console.error('DB operation failed:', dbErr)
-        throw new Error(`Failed to save: ${dbErr.message || 'Database operation failed'}`)
+        throw new Error(`Failed to save: ${(dbErr as Error).message || 'Database operation failed'}`)
       }
 
-    } catch (err: any) {
+    } catch (err) {
       console.error('Upload error:', err)
-      const errorMessage = err?.message || err?.error?.message || err?.error_description || 'Failed to upload. Please try again.'
+      const error = err as Error & { error?: { message?: string }; error_description?: string }
+      const errorMessage = error?.message || error?.error?.message || error?.error_description || 'Failed to upload. Please try again.'
       setError(errorMessage)
     } finally {
       setUploading(false)
@@ -328,5 +331,21 @@ export default function LiveUploadPage() {
         )}
       </main>
     </div>
+  )
+}
+
+export default function LiveUploadPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+        <Navigation />
+        <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-indigo-600" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <LiveUploadContent />
+    </Suspense>
   )
 }

@@ -14,6 +14,9 @@ export default function UploadPage() {
   const { user, loading, session } = useAuth()
   const router = useRouter()
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [emailLoading, setEmailLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [email, setEmail] = useState('')
 
   console.log('UploadPage render:', { user: !!user, loading, session: !!session })
 
@@ -66,8 +69,6 @@ export default function UploadPage() {
 
   // Show login form only if we're definitely not authenticated (no loading and no session)
   if (!loading && !session) {
-    const [emailLoading, setEmailLoading] = useState(false)
-    const [googleLoading, setGoogleLoading] = useState(false)
     
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
@@ -157,7 +158,7 @@ export default function UploadPage() {
                     </div>
                   )}
                 </Button>
-                <div className="text-xs text-gray-500">We'll redirect you back here after sign-in</div>
+                <div className="text-xs text-gray-500">We&apos;ll redirect you back here after sign-in</div>
               </div>
               <div className="mt-8 pt-6 border-t">
                 <Button variant="ghost" onClick={() => router.push('/')} className="text-indigo-600 hover:text-indigo-700">

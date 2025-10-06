@@ -20,6 +20,7 @@ export async function logActivity({
   metadata = {}
 }: LogActivityOptions) {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { isSupabaseConfigured } = require('./supabase')
     
     if (!isSupabaseConfigured) {
@@ -50,6 +51,7 @@ export async function logActivity({
 
 export async function getUserActivity(userId: string, limit: number = 20) {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { isSupabaseConfigured } = require('./supabase')
     
     if (!isSupabaseConfigured) {

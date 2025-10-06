@@ -52,7 +52,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
       // Return a soft timeout to prevent crashing the UI. We resolve to a rejected-like shape
       // only for fetch() calls, but for Supabase SDK calls we let the caller handle nulls.
       // Here, reject with a tagged error that callers can treat as non-fatal.
-      const err: any = new Error(`Operation timed out after ${timeoutMs}ms`)
+      const err = new Error(`Operation timed out after ${timeoutMs}ms`) as Error & { __softTimeout?: boolean }
       err.__softTimeout = true
       reject(err)
     }, timeoutMs)
@@ -65,14 +65,14 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 }
 
 // Type-safe wrapper for Supabase queries with timeout
-async function queryWithTimeout<T>(queryBuilder: any, timeoutMs: number): Promise<T> {
+async function queryWithTimeout<T>(queryBuilder: Promise<T>, timeoutMs: number): Promise<T> {
   return withTimeout(queryBuilder, timeoutMs)
 }
 
 // Type for Supabase query results
 interface SupabaseResult<T> {
   data: T | null
-  error: any
+  error: unknown
 }
 
 export async function getCurrentUser(): Promise<User | null> {
@@ -80,8 +80,8 @@ export async function getCurrentUser(): Promise<User | null> {
     console.log('🔍 Getting current user...')
     
     // Get auth user with timeout
-    let authUser: any = null
-    let authError: any = null
+    let authUser: { id: string; email?: string } | null = null
+    let authError: unknown = null
     try {
       const result = await withTimeout(
         supabase.auth.getUser(),
@@ -89,8 +89,8 @@ export async function getCurrentUser(): Promise<User | null> {
       )
       authUser = result?.data?.user
       authError = result?.error || null
-    } catch (e: any) {
-      if (e?.__softTimeout) {
+    } catch (e) {
+      if ((e as Error & { __softTimeout?: boolean })?.__softTimeout) {
         console.warn('Auth getUser timeout; continuing without user')
         return null
       }
@@ -110,28 +110,28 @@ export async function getCurrentUser(): Promise<User | null> {
     console.log('✅ Auth user found:', authUser.id)
 
     // Check if user exists in our users table with timeout
-    let userData: any = null
-    let fetchError: any = null
+    let userData: User | null = null
+    let fetchError: unknown = null
     try {
       const res = await queryWithTimeout<SupabaseResult<User>>(
         supabase
           .from('users')
           .select('*')
           .eq('id', authUser.id)
-          .single(),
+          .single() as unknown as Promise<SupabaseResult<User>>,
         5000
       )
       userData = res?.data ?? null
       fetchError = res?.error ?? null
-    } catch (e: any) {
-      if (e?.__softTimeout) {
+    } catch (e) {
+      if ((e as Error & { __softTimeout?: boolean })?.__softTimeout) {
         console.warn('User row fetch timeout; returning null user')
         return null
       }
       fetchError = e
     }
 
-    if (fetchError && fetchError.code !== 'PGRST116') {
+    if (fetchError && (fetchError as { code?: string }).code !== 'PGRST116') {
       // PGRST116 is "not found" - other errors should be logged
       console.error('❌ Error fetching user data:', fetchError)
       return null
@@ -165,8 +165,8 @@ export async function getCurrentUser(): Promise<User | null> {
           }),
           12000
         )
-      } catch (e: any) {
-        if (e?.__softTimeout) {
+      } catch (e) {
+        if ((e as Error & { __softTimeout?: boolean })?.__softTimeout) {
           console.warn('ensure-user API timeout; falling back to direct creation')
           return await createUserDirectly(authUser)
         }
@@ -196,7 +196,7 @@ export async function getCurrentUser(): Promise<User | null> {
           .from('users')
           .select('*')
           .eq('id', authUser.id)
-          .single(),
+          .single() as unknown as Promise<SupabaseResult<User>>,
         3000
       )
       
@@ -215,7 +215,7 @@ export async function getCurrentUser(): Promise<User | null> {
 }
 
 // Fallback function to create user directly if API fails
-async function createUserDirectly(authUser: any): Promise<User | null> {
+async function createUserDirectly(authUser: { id: string; email?: string }): Promise<User | null> {
   try {
     console.log('🔨 Creating user directly in database...')
     
@@ -223,19 +223,19 @@ async function createUserDirectly(authUser: any): Promise<User | null> {
     const { data: newUser, error: insertError } = await queryWithTimeout<SupabaseResult<User>>(
       supabase
         .from('users')
-        .insert({ 
-          id: authUser.id, 
-          handle, 
+        .insert({
+          id: authUser.id,
+          handle,
           handle_version: 1
         })
         .select()
-        .single(),
+        .single() as unknown as Promise<SupabaseResult<User>>,
       5000 // 5 second timeout
     )
 
     if (insertError) {
       // Handle duplicate key error (race condition)
-      if (insertError.code === '23505' || insertError.message?.includes('duplicate key value')) {
+      if ((insertError as { code?: string; message?: string }).code === '23505' || (insertError as { code?: string; message?: string }).message?.includes('duplicate key value')) {
         console.log('🔄 Race condition detected, fetching existing user')
         const { data: existingUser } = await supabase
           .from('users')

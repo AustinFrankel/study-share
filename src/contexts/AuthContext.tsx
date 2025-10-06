@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           sessionResult = await Promise.race([
             supabase.auth.getSession(),
-            new Promise<any>((_, reject) => 
+            new Promise<{ data: { session: null }; error: Error }>((_, reject) =>
               setTimeout(() => reject(new Error('Session fetch timeout')), 10000)
             )
           ])

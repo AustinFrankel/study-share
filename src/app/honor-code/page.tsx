@@ -53,7 +53,7 @@ export default function HonorCodePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-gray-600 space-y-2">
-              <p>Always follow your institution\'s academic integrity rules.</p>
+              <p>Always follow your institution&apos;s academic integrity rules.</p>
               <p>If unsure whether something is allowed, ask your instructor first.</p>
             </CardContent>
           </Card>

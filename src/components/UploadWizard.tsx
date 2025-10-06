@@ -871,7 +871,7 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
               .eq('id', classId)
               .single()
             if (!error && data?.id) return
-            const cls: any = classes.find(c => c.id === classId)
+            const cls = classes.find(c => c.id === classId) as { id: string; school_id: string; subject_id: string; subject?: { name: string }; teacher_id: string; title: string; code: string; term?: string } | undefined
             if (!cls) throw new Error('Selected class is invalid. Please select a valid class or create one.')
             const ensuredSchoolId = await ensureSchool(cls.school_id)
             const ensuredSubjectId = await ensureSubject(cls.subject_id, cls.subject?.name)
@@ -889,9 +889,9 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
           }
 
           await ensureClass(selectedClass)
-        } catch (e: any) {
+        } catch (e) {
           console.error('Error ensuring related entities:', e)
-          setError(`Failed to prepare class information: ${e?.message || 'unknown error'}`)
+          setError(`Failed to prepare class information: ${(e as Error)?.message || 'unknown error'}`)
           setLoading(false)
           setUploadProgress(0)
           setProcessingStatus('')
