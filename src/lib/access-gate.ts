@@ -64,17 +64,16 @@ export async function getUserAccessInfo(userId: string): Promise<UserAccessInfo>
       throw monthlyError
     }
 
-    // Get upload bonus views from points ledger
-    const { data: uploadBonusData } = await supabase
+    // Get upload bonus views - use count instead of fetching all records
+    const { count: uploadBonusCount } = await supabase
       .from('points_ledger')
-      .select('*', { count: 'exact' })
+      .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('reason', 'upload_view_cap_increase')
       .gte('created_at', `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`)
       .lt('created_at', `${now.getFullYear()}-${String(now.getMonth() + 2).padStart(2, '0')}-01`)
 
-    const uploadBonusCount = uploadBonusData?.length || 0
-    const uploadBonusViews = uploadBonusCount * 5 // 5 views per upload
+    const uploadBonusViews = (uploadBonusCount || 0) * 5 // 5 views per upload
 
     // Calculate max views (base + ads bonus + upload bonus, with minimum cap of 8)
     const maxViewsThisMonth = Math.max(

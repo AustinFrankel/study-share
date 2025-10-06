@@ -38,7 +38,7 @@
 ## 🔧 STILL NEEDS SETUP
 
 ### Database Tables (USER MUST DO)
-1. Go to: https://app.supabase.com/project/dnknanwmaekhtmpbpjpo/sql
+1. Go to: https://app.supabase.com/project/YOUR_PROJECT_ID/sql
 2. Copy contents of `scripts/setup-live-storage.sql`
 3. Paste and run in SQL Editor
 4. This creates:
@@ -47,7 +47,7 @@
    - `test_purchases`
 
 ### Storage Bucket (USER MUST DO)
-1. Go to: https://app.supabase.com/project/dnknanwmaekhtmpbpjpo/storage/buckets
+1. Go to: https://app.supabase.com/project/YOUR_PROJECT_ID/storage/buckets
 2. If "resources" bucket doesn't exist, create it:
    - Name: `resources`
    - Public: YES

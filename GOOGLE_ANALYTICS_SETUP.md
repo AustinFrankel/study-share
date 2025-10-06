@@ -1,15 +1,26 @@
 # Google Analytics Setup Guide
 
-## ✅ Google Analytics Tag Installed
+## ✅ Google Analytics Tag Installation
 
-Your Google Analytics tag (G-2GM809Z237) has been successfully installed in the app.
+Your Google Analytics tracking is now configured to load from environment variables.
 
 ### What Was Done
 
 1. **Added Google Analytics to Layout** (`src/app/layout.tsx`)
    - Installed gtag.js script in the `<head>` section
-   - Configuration ID: `G-2GM809Z237`
-   - Loads on every page automatically
+   - Loads from `NEXT_PUBLIC_GA_ID` environment variable
+   - Only loads in production (`NODE_ENV === 'production'`)
+   - Automatically tracks all pages
+
+### Setup Instructions
+
+1. Get your Google Analytics ID from [Google Analytics](https://analytics.google.com)
+2. Add to `.env.local`:
+   ```
+   NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
+   ```
+3. Add to Vercel environment variables (Production only)
+4. The tracking code will automatically load when deployed
 
 ### How It Works
 
@@ -38,7 +49,7 @@ To verify Google Analytics is working:
    - Install [Google Tag Assistant Chrome Extension](https://chrome.google.com/webstore/detail/tag-assistant-legacy-by-g/kejbdjndbnbjgmefkgdddjlbokphdefk)
    - Visit your site
    - Click the extension icon
-   - Should show "G-2GM809Z237" as working
+   - Should show your GA ID as working
 
 ### Adding New Pages
 

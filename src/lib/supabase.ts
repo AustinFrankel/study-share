@@ -1,51 +1,57 @@
 import { createClient } from '@supabase/supabase-js'
 import { createBrowserClient } from '@supabase/ssr'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+// Environment variables - fail fast if missing
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Check if we have real Supabase credentials
-const hasValidCredentials = 
-  supabaseUrl !== 'https://placeholder.supabase.co' && 
-  supabaseAnonKey !== 'placeholder-key' &&
-  !supabaseUrl.includes('your_supabase_project_url') &&
-  !supabaseAnonKey.includes('your_supabase_anon_key') &&
-  !supabaseUrl.includes('your-project-id') &&
-  !supabaseAnonKey.includes('your-anon-key-here') &&
+// Validate configuration (strict validation, no fallbacks)
+const hasValidCredentials =
+  !!supabaseUrl &&
+  !!supabaseAnonKey &&
   supabaseUrl.startsWith('https://') &&
   supabaseUrl.includes('.supabase.co') &&
   supabaseAnonKey.length > 20 &&
   supabaseAnonKey.startsWith('eyJ') // JWT tokens start with eyJ
 
-// Log configuration status for debugging
-if (typeof window !== 'undefined') {
-  console.log('Supabase Configuration Status:', {
-    hasValidCredentials,
-    supabaseUrl: supabaseUrl.includes('placeholder') ? 'PLACEHOLDER' : 'CONFIGURED',
-    supabaseKey: supabaseAnonKey.includes('placeholder') ? 'PLACEHOLDER' : 'CONFIGURED'
-  })
+// Throw error in development if config is invalid (helps catch issues early)
+if (!hasValidCredentials && typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  console.error('❌ Supabase configuration is invalid or missing. Please check your environment variables.')
 }
 
+// Create Supabase client only if we have valid credentials
 // Use the SSR-aware browser client on the client so it reads the auth cookies
 // that were set during the OAuth callback (exchangeCodeForSession). This
 // prevents a post-login loop where getSession() returns null until a manual
 // client sign-in occurs.
-export const supabase = typeof window !== 'undefined'
-  ? createBrowserClient(supabaseUrl, supabaseAnonKey)
-  : createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        // In server environments, avoid persisting session state
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
+export const supabase = hasValidCredentials && supabaseUrl && supabaseAnonKey
+  ? (typeof window !== 'undefined'
+      ? createBrowserClient(supabaseUrl, supabaseAnonKey)
+      : createClient(supabaseUrl, supabaseAnonKey, {
+          auth: {
+            // In server environments, avoid persisting session state
+            autoRefreshToken: false,
+            persistSession: false,
+          },
+        }))
+  : null as any // null when not configured (app should check isSupabaseConfigured)
 
 // Export a flag to check if Supabase is properly configured
 export const isSupabaseConfigured = hasValidCredentials
 
-// For server-side operations
+// For server-side operations (API routes, server components)
+// This should NEVER be used in client-side code
 export const createServiceRoleClient = () => {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-key'
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!serviceRoleKey || !supabaseUrl) {
+    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL environment variable')
+  }
+
+  if (typeof window !== 'undefined') {
+    throw new Error('createServiceRoleClient() should never be called on the client side - service role key must stay secret!')
+  }
+
   return createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,

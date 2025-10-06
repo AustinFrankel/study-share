@@ -65,16 +65,16 @@ export const STANDARDIZED_TESTS_2025 = [
     name: 'PSAT',
     fullName: 'PSAT/NMSQT',
     date: new Date('2025-10-15T08:00:00'),
-    description: 'Practice SAT and National Merit Scholarship qualifier',
+    description: 'College Board preliminary exam for college admissions',
     color: 'from-indigo-500 to-indigo-600',
     icon: '📝',
     category: 'College Admissions'
   }
 ]
 
+// AP Exams with multiple choice (excluding portfolio/performance-based APs like Art, Music Theory, etc.)
 export const AP_EXAMS_2025 = [
   // Week 1: May 5-9, 2025
-  { id: 'ap-art-history', name: 'Art History', fullName: 'AP Art History', date: new Date('2025-05-05T08:00:00'), time: '8 AM', color: 'from-pink-500 to-rose-600', icon: '🎨' },
   { id: 'ap-chinese', name: 'Chinese Language', fullName: 'AP Chinese Language and Culture', date: new Date('2025-05-05T12:00:00'), time: '12 PM', color: 'from-red-500 to-orange-600', icon: '🇨🇳' },
   { id: 'ap-environmental-science', name: 'Environmental Science', fullName: 'AP Environmental Science', date: new Date('2025-05-06T08:00:00'), time: '8 AM', color: 'from-lime-500 to-green-600', icon: '🌱' },
   { id: 'ap-psychology', name: 'Psychology', fullName: 'AP Psychology', date: new Date('2025-05-06T12:00:00'), time: '12 PM', color: 'from-purple-500 to-fuchsia-600', icon: '🧠' },
@@ -82,10 +82,9 @@ export const AP_EXAMS_2025 = [
   { id: 'ap-calculus-bc', name: 'Calculus BC', fullName: 'AP Calculus BC', date: new Date('2025-05-07T08:00:00'), time: '8 AM', color: 'from-blue-600 to-indigo-600', icon: '∫' },
   { id: 'ap-computer-science-a', name: 'Computer Science A', fullName: 'AP Computer Science A', date: new Date('2025-05-07T12:00:00'), time: '12 PM', color: 'from-slate-500 to-gray-600', icon: '💻' },
   { id: 'ap-italian', name: 'Italian Language', fullName: 'AP Italian Language and Culture', date: new Date('2025-05-08T08:00:00'), time: '8 AM', color: 'from-green-500 to-emerald-600', icon: '🇮🇹' },
-  { id: 'ap-seminar', name: 'Seminar', fullName: 'AP Seminar', date: new Date('2025-05-08T12:00:00'), time: '12 PM', color: 'from-teal-500 to-cyan-600', icon: '📊' },
   { id: 'ap-english-literature', name: 'English Literature', fullName: 'AP English Literature and Composition', date: new Date('2025-05-09T08:00:00'), time: '8 AM', color: 'from-yellow-500 to-amber-600', icon: '📚' },
   { id: 'ap-japanese', name: 'Japanese Language', fullName: 'AP Japanese Language and Culture', date: new Date('2025-05-09T12:00:00'), time: '12 PM', color: 'from-red-500 to-pink-600', icon: '🇯🇵' },
-  
+
   // Week 2: May 12-16, 2025
   { id: 'ap-us-government', name: 'US Government', fullName: 'AP United States Government and Politics', date: new Date('2025-05-12T08:00:00'), time: '8 AM', color: 'from-red-500 to-blue-600', icon: '🏛️' },
   { id: 'ap-comparative-government', name: 'Comparative Government', fullName: 'AP Comparative Government and Politics', date: new Date('2025-05-12T12:00:00'), time: '12 PM', color: 'from-indigo-500 to-purple-600', icon: '🌐' },
@@ -98,7 +97,7 @@ export const AP_EXAMS_2025 = [
   { id: 'ap-physics-c-em', name: 'Physics C: E&M', fullName: 'AP Physics C: Electricity and Magnetism', date: new Date('2025-05-15T14:00:00'), time: '2 PM', color: 'from-sky-500 to-cyan-600', icon: '🔬' },
   { id: 'ap-biology', name: 'Biology', fullName: 'AP Biology', date: new Date('2025-05-16T08:00:00'), time: '8 AM', color: 'from-green-500 to-emerald-600', icon: '🧬' },
   { id: 'ap-spanish-language', name: 'Spanish Language', fullName: 'AP Spanish Language and Culture', date: new Date('2025-05-16T12:00:00'), time: '12 PM', color: 'from-yellow-500 to-red-600', icon: '🇪🇸' },
-  
+
   // Week 3: May 19-23, 2025 (if applicable)
 ]
 

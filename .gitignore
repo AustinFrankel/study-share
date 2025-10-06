@@ -30,8 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (no longer ignored per user request)
-# .env*
+# env files - ALWAYS ignore to prevent secret leaks
+.env*
+!.env.example
 
 # vercel
 .vercel

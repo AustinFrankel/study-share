@@ -8,13 +8,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Upload, Lock, FileText, Image as ImageIcon, CheckCircle2, Loader2 } from 'lucide-react'
+import { Upload, Lock, FileText, Image as ImageIcon, CheckCircle2, Loader2, Wand2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { processTestImages } from '@/lib/ocr'
 
 export const dynamic = 'force-dynamic'
 
-const UPLOAD_PASSWORD = 'Austin11!'
+const UPLOAD_PASSWORD = 'Unlock'
 
 function LiveUploadContent() {
   const router = useRouter()
@@ -31,6 +32,8 @@ function LiveUploadContent() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [processingOCR, setProcessingOCR] = useState(false)
+  const [ocrProgress, setOcrProgress] = useState('')
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,81 +57,75 @@ function LiveUploadContent() {
     setError('')
 
     try {
-      const uploadData: Record<string, unknown> = {
-        test_id: testId,
-        test_name: testName,
-        uploader_id: user?.id || null,
-        upload_type: uploadType,
-        created_at: new Date().toISOString()
-      }
-
-      if (uploadType === 'text') {
-        uploadData.content = textContent
-      } else if (uploadType === 'image' && selectedFiles.length > 0) {
-        // Upload images to storage
-        const imageUrls: string[] = []
+      if (uploadType === 'image' && selectedFiles.length > 0) {
+        // Process images with OCR
+        setProcessingOCR(true)
+        setOcrProgress('Processing images with OCR...')
         
-        for (const file of selectedFiles) {
-          const fileExt = file.name.split('.').pop()
-          const fileName = `${testId}_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
-          const filePath = `live-tests/${fileName}`
-
-          try {
-            const { data: uploadData, error: uploadError } = await supabase.storage
-              .from('resources')
-              .upload(filePath, file, {
-                cacheControl: '3600',
-                upsert: false
-              })
-
-            if (uploadError) {
-              console.error('Storage upload error:', uploadError)
-              throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`)
-            }
-
-            const { data: { publicUrl } } = supabase.storage
-              .from('resources')
-              .getPublicUrl(filePath)
-
-            imageUrls.push(publicUrl)
-          } catch (storageError) {
-            console.error('Storage error:', storageError)
-            throw new Error(`Storage error for ${file.name}: ${(storageError as Error).message || 'Unknown error'}`)
-          }
+        const ocrResult = await processTestImages(selectedFiles, testId || 'unknown')
+        
+        if (!ocrResult.success || !ocrResult.questions) {
+          setProcessingOCR(false)
+          throw new Error(ocrResult.error || 'Failed to extract questions from images')
         }
+        
+        setOcrProgress(`Extracted ${ocrResult.questions.length} questions. Saving to database...`)
+        
+        // Save questions to test_resources table
+        const { error: dbError } = await supabase
+          .from('test_resources')
+          .upsert({
+            test_id: testId,
+            test_name: testName,
+            questions: ocrResult.questions,
+            uploader_id: user?.id || null,
+            created_at: new Date().toISOString()
+          }, {
+            onConflict: 'test_id'
+          })
 
-        uploadData.image_urls = imageUrls
-      }
-
-      // Store in database
-      try {
-        const { data, error: dbError } = await supabase
+        if (dbError) {
+          console.error('Database error:', dbError)
+          throw new Error(`Database error: ${dbError.message || 'Failed to save to database'}`)
+        }
+        
+        setProcessingOCR(false)
+        setSuccess(true)
+        
+        // Redirect after 2 seconds
+        setTimeout(() => {
+          router.push(`/live/test?test=${testId}`)
+        }, 2000)
+      } else if (uploadType === 'text') {
+        // Save text content directly (future enhancement: parse text to questions)
+        const { error: dbError } = await supabase
           .from('live_test_uploads')
-          .insert(uploadData)
-          .select()
+          .insert({
+            test_id: testId,
+            test_name: testName,
+            content: textContent,
+            uploader_id: user?.id || null,
+            upload_type: 'text',
+            created_at: new Date().toISOString()
+          })
 
         if (dbError) {
           console.error('Database error:', dbError)
           throw new Error(`Database error: ${dbError.message || 'Failed to save to database'}`)
         }
 
-        console.log('Upload successful:', data)
         setSuccess(true)
         
-        // Redirect after 2 seconds
         setTimeout(() => {
-          router.push(`/live/view?test=${testId}&name=${encodeURIComponent(testName || '')}`)
+          router.push(`/live/test?test=${testId}`)
         }, 2000)
-      } catch (dbErr) {
-        console.error('DB operation failed:', dbErr)
-        throw new Error(`Failed to save: ${(dbErr as Error).message || 'Database operation failed'}`)
       }
-
     } catch (err) {
       console.error('Upload error:', err)
       const error = err as Error & { error?: { message?: string }; error_description?: string }
       const errorMessage = error?.message || error?.error?.message || error?.error_description || 'Failed to upload. Please try again.'
       setError(errorMessage)
+      setProcessingOCR(false)
     } finally {
       setUploading(false)
     }
@@ -298,6 +295,13 @@ function LiveUploadContent() {
                   </div>
                 )}
 
+                {processingOCR && (
+                  <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded flex items-center gap-3">
+                    <Wand2 className="w-5 h-5 animate-pulse" />
+                    <span>{ocrProgress}</span>
+                  </div>
+                )}
+
                 <div className="flex gap-4">
                   <Button
                     type="button"
@@ -309,18 +313,18 @@ function LiveUploadContent() {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={uploading || (uploadType === 'image' && selectedFiles.length === 0) || (uploadType === 'text' && !textContent.trim())}
+                    disabled={uploading || processingOCR || (uploadType === 'image' && selectedFiles.length === 0) || (uploadType === 'text' && !textContent.trim())}
                     className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 text-white py-6 text-lg"
                   >
-                    {uploading ? (
+                    {uploading || processingOCR ? (
                       <div className="flex items-center gap-2">
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        Uploading...
+                        {processingOCR ? 'Processing with OCR...' : 'Uploading...'}
                       </div>
                     ) : (
                       <>
                         <Upload className="w-5 h-5 mr-2" />
-                        Upload Test
+                        {uploadType === 'image' ? 'Process & Upload Test' : 'Upload Test'}
                       </>
                     )}
                   </Button>

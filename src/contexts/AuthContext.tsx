@@ -73,11 +73,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         console.log('🚀 Initializing auth...')
         
-        // If Supabase is not configured, use demo mode
+        // If Supabase is not configured, check if demo mode is enabled
         if (!isSupabaseConfigured) {
-          console.log('⚠️ Supabase not configured, using demo mode')
-          if (mounted) {
-            // Create a demo user for testing
+          const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+          if (demoMode && mounted) {
+            // Create a demo user for testing (only if explicitly enabled)
             const demoUser: User = {
               id: 'demo-user-' + Date.now(),
               handle: 'demo_user',
@@ -85,6 +85,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               created_at: new Date().toISOString()
             }
             setUser(demoUser)
+            setSession(null)
+            setLoading(false)
+          } else if (mounted) {
+            // No Supabase and demo mode not enabled - no user
+            setUser(null)
             setSession(null)
             setLoading(false)
           }
@@ -144,42 +149,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     initializeAuth()
-    
-    // Clear the timeout if auth completes normally
-    const clearMaxTimeout = () => {
-      clearTimeout(maxLoadingTimeout)
-    }
 
     // Listen for auth changes
     let subscription: { unsubscribe: () => void } | null = null
-    
+
     if (isSupabaseConfigured) {
-      const authResult = supabase.auth.onAuthStateChange(async (event, session) => {
+      const authResult = supabase.auth.onAuthStateChange(async (event: string, newSession) => {
       if (!mounted) return
-      
-      console.log('Auth state change:', event, !!session)
-      
+
+      console.log('Auth state change:', event, !!newSession)
+
       // Always update session state
-      setSession(session)
-      
-      if (session) {
+      setSession(newSession)
+
+      if (newSession) {
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
           // User just signed in or we got initial session, load user data
           console.log('User signed in, loading user data...')
           await refreshUser()
         } else if (event !== 'TOKEN_REFRESHED') {
-          // For other events (not token refresh), also refresh user if we don't have user data
-          if (!user) {
-            console.log('Session exists but no user data, loading...')
-            await refreshUser()
-          }
+          // For other events (not token refresh), check current state
+          setUser(currentUser => {
+            if (!currentUser) {
+              console.log('Session exists but no user data, loading...')
+              refreshUser()
+            }
+            return currentUser
+          })
         }
       } else {
         // No session, clear user data
         console.log('No session, clearing user data')
         setUser(null)
       }
-      
+
       // Always ensure loading is false after auth state change
       setLoading(false)
     })
@@ -191,7 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription?.unsubscribe()
       clearTimeout(maxLoadingTimeout)
     }
-  }, [])
+  }, [refreshUser])
 
   return (
     <AuthContext.Provider value={{ user, session, loading, refreshUser }}>

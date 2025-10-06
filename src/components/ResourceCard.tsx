@@ -9,9 +9,11 @@ import { ArrowUp, ArrowDown, MessageCircle, Clock, User, GraduationCap, BookOpen
 import StarRating from '@/components/StarRating'
 import { Resource } from '@/lib/types'
 import { formatDistanceToNow } from 'date-fns'
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { throttle } from '@/lib/debounce'
+import { useToast } from '@/components/ui/toast'
 
 interface ResourceCardProps {
   resource: Resource
@@ -51,63 +53,79 @@ export default function ResourceCard({
   showDeleteOption = false,
   currentUserId
 }: ResourceCardProps) {
+  const { showToast } = useToast()
+
   // Local vote state for optimistic UI
   const [localVote, setLocalVote] = useState<number>(resource.user_vote || 0)
   const [localCount, setLocalCount] = useState<number>(resource.vote_count || 0)
   // Local rating state so stars can be interactive on cards
   const [localRating, setLocalRating] = useState<number>((resource as Resource & { user_rating?: number }).user_rating || 0)
+  // Track voting in progress to prevent duplicate requests
+  const [isVoting, setIsVoting] = useState(false)
 
-  const handleVote = async (value: 1 | -1) => {
-    if (onVote && !votingLoading) {
-      // optimistic update
-      const prevVote = localVote
-      const prevCount = localCount
-      let nextVote: -1 | 0 | 1 = value
-      let nextCount = localCount
-      if (prevVote === value) {
-        // unvote
-        nextVote = 0
-        nextCount = localCount - value
-      } else {
-        // change or add vote
-        nextCount = localCount - prevVote + value
-      }
-      setLocalVote(nextVote)
-      setLocalCount(nextCount)
-
+  // Throttled vote handler to prevent rapid-fire requests
+  const throttledVote = useRef(
+    throttle(async (resourceId: string, value: 1 | -1, onVoteFn: (resourceId: string, value: 1 | -1) => Promise<void>) => {
+      setIsVoting(true)
       try {
-        await onVote(resource.id, value)
-        
-        // Show success notification
-        if (nextVote !== 0) {
-          const message = value === 1 ? '👍 Upvoted!' : '👎 Downvoted!'
-          showNotification(message, 'success')
-        } else {
-          showNotification('Vote removed', 'info')
-        }
-      } catch (e) {
-        // revert on error
-        setLocalVote(prevVote)
-        setLocalCount(prevCount)
-        showNotification('Failed to vote. Please try again.', 'error')
+        await onVoteFn(resourceId, value)
+      } finally {
+        setIsVoting(false)
       }
+    }, 500) // 500ms throttle
+  ).current
+
+  const handleVote = useCallback(async (value: 1 | -1) => {
+    if (!onVote || votingLoading || isVoting) return
+
+    // Optimistic update
+    const prevVote = localVote
+    const prevCount = localCount
+    let nextVote: -1 | 0 | 1 = value
+    let nextCount = localCount
+    if (prevVote === value) {
+      // unvote
+      nextVote = 0
+      nextCount = localCount - value
+    } else {
+      // change or add vote
+      nextCount = localCount - prevVote + value
     }
-  }
+    setLocalVote(nextVote)
+    setLocalCount(nextCount)
+
+    try {
+      await throttledVote(resource.id, value, onVote)
+
+      // Show success notification
+      if (nextVote !== 0) {
+        const message = value === 1 ? '👍 Upvoted!' : '👎 Downvoted!'
+        showToast(message, 'success')
+      } else {
+        showToast('Vote removed', 'info')
+      }
+    } catch (e) {
+      // revert on error
+      setLocalVote(prevVote)
+      setLocalCount(prevCount)
+      showToast('Failed to vote. Please try again.', 'error')
+    }
+  }, [onVote, votingLoading, isVoting, localVote, localCount, resource.id, throttledVote, showToast])
 
   // Star rating from the card (optional, when logged in)
   const handleRate = async (rating: number) => {
     if (!currentUserId) {
-      showNotification('Please sign in to rate resources', 'info')
+      showToast('Please sign in to rate resources', 'info')
       return
     }
-    
+
     // Optimistic update
     const prev = localRating
     setLocalRating(rating)
-    
+
     try {
       if (!isSupabaseConfigured) {
-        showNotification(`⭐ Rated ${rating} stars!`, 'success')
+        showToast(`⭐ Rated ${rating} stars!`, 'success')
         return
       }
       
@@ -129,15 +147,15 @@ export default function ResourceCard({
         // Check if table doesn't exist
         const errorMsg = error.message || error.hint || JSON.stringify(error)
         if (errorMsg.toLowerCase().includes('relation') || errorMsg.toLowerCase().includes('does not exist') || errorMsg.toLowerCase().includes('table')) {
-          // Demo mode - table doesn't exist yet
-          showNotification('⭐ Rating saved locally (demo mode)', 'info')
+          // Table doesn't exist yet - fail silently
+          showToast('⭐ Rating saved locally', 'info')
           return
         }
         throw error
       }
-      
+
       // Show success notification
-      showNotification(`⭐ Rated ${rating} stars!`, 'success')
+      showToast(`⭐ Rated ${rating} stars!`, 'success')
     } catch (e: unknown) {
       // Revert if failed
       setLocalRating(prev)
@@ -157,32 +175,15 @@ export default function ResourceCard({
       }
       
       // Check if it's a table doesn't exist error
-      if (errorMessage.toLowerCase().includes('relation') || 
-          errorMessage.toLowerCase().includes('does not exist') || 
+      if (errorMessage.toLowerCase().includes('relation') ||
+          errorMessage.toLowerCase().includes('does not exist') ||
           errorMessage.toLowerCase().includes('table') ||
           errorMessage === 'Unknown error') {
-        showNotification('⭐ Rating saved locally (demo mode)', 'info')
+        showToast('⭐ Rating saved locally', 'info')
       } else {
-        showNotification('Failed to rate. Please try again.', 'error')
+        showToast('Failed to rate. Please try again.', 'error')
       }
     }
-  }
-
-  // Simple notification function
-  const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
-    const notification = document.createElement('div')
-    notification.textContent = message
-    notification.className = `fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white font-medium animate-fade-in ${
-      type === 'success' ? 'bg-green-500' :
-      type === 'error' ? 'bg-red-500' :
-      'bg-blue-500'
-    }`
-    document.body.appendChild(notification)
-    setTimeout(() => {
-      notification.style.opacity = '0'
-      notification.style.transition = 'opacity 0.3s'
-      setTimeout(() => notification.remove(), 300)
-    }, 2000)
   }
 
   const firstImageFile = resource.files?.find(file => file.mime && file.mime.startsWith('image/'))

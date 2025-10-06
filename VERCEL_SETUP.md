@@ -18,16 +18,18 @@ Copy and paste these into your Vercel project's Environment Variables section:
 ### Production, Preview, and Development (check all three)
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://dnknanwmaekhtmpbpjpo.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
 ```
 
 ```
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRua25hbndtYWVraHRtcGJwanBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxMjQ3MDksImV4cCI6MjA3MzcwMDcwOX0.B2rvyWyZJQclEAQRzzpqVY0ZHxWl5FwZ8cV-dJo82_o
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 ```
 
 ```
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRua25hbndtYWVraHRtcGJwanBvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1ODEyNDcwOSwiZXhwIjoyMDczNzAwNzA5fQ.V07J-s8lbWp4TDhVosqESBECR1VsLl-J29fzTbO_Kzg
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
 ```
+
+**Get your keys from:** [Supabase Dashboard → Project Settings → API](https://supabase.com/dashboard)
 
 ## 📋 Step-by-Step Vercel Deployment
 
@@ -73,9 +75,9 @@ Every time you push to the `main` branch on GitHub, Vercel will automatically:
 
 ## 🎯 Supabase Project Info
 
-- **Project URL**: https://supabase.com/dashboard/project/dnknanwmaekhtmpbpjpo
-- **Project ID**: dnknanwmaekhtmpbpjpo
-- **Region**: US East (probably)
+- **Project URL**: https://supabase.com/dashboard/project/YOUR_PROJECT_ID
+- **Project ID**: YOUR_PROJECT_ID (found in Supabase dashboard)
+- **Region**: Check your Supabase project settings
 
 ## 📊 Next Steps After Deployment
 
@@ -103,13 +105,15 @@ Every time you push to the `main` branch on GitHub, Vercel will automatically:
 
 ## 🔒 Security Notes
 
-Your keys are now:
-- ✅ In `.env.local` (committed to GitHub as you requested)
-- ✅ In Vercel Environment Variables (secure)
-- ⚠️ **Anon key is safe to expose** (public-facing, has RLS protection)
-- ⚠️ **Service role key should be secret** (but you gave permission to share)
+Your keys should be:
+- ✅ In `.env.local` (NEVER commit this file to git - it's in .gitignore)
+- ✅ In Vercel Environment Variables (secure, encrypted)
+- ⚠️ **Anon key can be exposed** (public-facing, protected by RLS)
+- 🚨 **Service role key must stay secret** (bypasses all RLS - never expose!)
 
-For production, consider:
-- Rotating service role key if ever leaked
-- Setting up rate limiting
-- Enabling Supabase's built-in CAPTCHA for auth
+**Important:**
+- The service role key should ONLY be used in server-side code
+- Never use service role key in client-side code
+- Rotate keys immediately if ever accidentally exposed
+- Set up rate limiting and monitoring in production
+- Enable Supabase's built-in security features (CAPTCHA, rate limits)

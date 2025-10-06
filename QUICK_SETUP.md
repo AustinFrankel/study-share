@@ -3,7 +3,7 @@
 ## 1. Database Setup (REQUIRED)
 
 Go to your Supabase Dashboard SQL Editor:
-https://app.supabase.com/project/dnknanwmaekhtmpbpjpo/sql
+https://app.supabase.com/project/YOUR_PROJECT_ID/sql
 
 Copy and paste the entire contents of:
 `scripts/setup-live-storage.sql`
@@ -12,7 +12,7 @@ Click RUN to create the tables.
 
 ## 2. Storage Bucket Setup (REQUIRED)
 
-1. Go to Supabase Storage: https://app.supabase.com/project/dnknanwmaekhtmpbpjpo/storage/buckets
+1. Go to Supabase Storage: https://app.supabase.com/project/YOUR_PROJECT_ID/storage/buckets
 2. Check if "resources" bucket exists
 3. If not, create it:
    - Name: resources

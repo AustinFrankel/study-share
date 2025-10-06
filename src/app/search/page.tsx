@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Resource } from '@/lib/types'
 import { useAuth } from '@/contexts/AuthContext'
 import { getUserViewedResources } from '@/lib/access-gate'
-import { createSmartSearchQuery, scoreRelevance } from '@/lib/fuzzy-search'
 import Navigation from '@/components/Navigation'
 import SearchBar from '@/components/SearchBar'
 import FacetFilters from '@/components/FacetFilters'
@@ -15,26 +14,101 @@ import { Search as SearchIcon, Loader2 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
+const RESULTS_PER_PAGE = 20
+
 function SearchPageContent() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
   const query = searchParams.get('q') || ''
-  
+
   const [resources, setResources] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
   const [schools, setSchools] = useState<Array<{ id: string; name: string }>>([])
   const [subjects, setSubjects] = useState<Array<{ id: string; name: string }>>([])
   const [teachers, setTeachers] = useState<Array<{ id: string; name: string }>>([])
   const [viewedResources, setViewedResources] = useState<string[]>([])
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
 
-  useEffect(() => {
-    if (query) {
-      searchResources(query)
-    } else {
+  // Memoize search function to prevent recreation on every render
+  const searchResources = useCallback(async (searchQuery: string, pageNum: number = 0) => {
+    setLoading(true)
+    try {
+      // Use PostgreSQL full-text search for better performance
+      // Only select necessary columns to reduce data transfer
+      let queryBuilder = supabase
+        .from('resources')
+        .select(`
+          id,
+          title,
+          type,
+          created_at,
+          vote_count,
+          user_vote,
+          average_rating,
+          rating_count,
+          difficulty,
+          study_time,
+          uploader_id,
+          class:classes!inner(
+            id,
+            title,
+            code,
+            school:schools(id, name),
+            subject:subjects(id, name),
+            teacher:teachers(id, name)
+          ),
+          uploader:users(id, handle, avatar_url),
+          ai_derivative:ai_derivatives(status),
+          files(id, mime)
+        `, { count: 'exact' })
+
+      // Use PostgreSQL text search instead of client-side filtering
+      if (searchQuery.trim()) {
+        // Search across multiple fields using OR conditions
+        queryBuilder = queryBuilder.or(
+          `title.ilike.%${searchQuery}%,` +
+          `classes.title.ilike.%${searchQuery}%,` +
+          `classes.code.ilike.%${searchQuery}%`
+        )
+      }
+
+      const { data, error, count } = await queryBuilder
+        .order('created_at', { ascending: false })
+        .range(pageNum * RESULTS_PER_PAGE, (pageNum + 1) * RESULTS_PER_PAGE - 1)
+
+      if (error) throw error
+
+      const transformedData = data || []
+
+      if (pageNum === 0) {
+        setResources(transformedData)
+      } else {
+        setResources(prev => [...prev, ...transformedData])
+      }
+
+      setHasMore((count || 0) > (pageNum + 1) * RESULTS_PER_PAGE)
+    } catch (error) {
+      console.error('Error searching resources:', error)
+      setResources([])
+    } finally {
       setLoading(false)
     }
+  }, [])
+
+  useEffect(() => {
+    setPage(0)
+    if (query) {
+      searchResources(query, 0)
+    } else {
+      setLoading(false)
+      setResources([])
+    }
+  }, [query, searchResources])
+
+  useEffect(() => {
     fetchFilterOptions()
-  }, [query])
+  }, [])
 
   useEffect(() => {
     if (user) {
@@ -52,168 +126,12 @@ function SearchPageContent() {
     }
   }
 
-  const searchResources = async (searchQuery: string) => {
-    setLoading(true)
-    try {
-      // Enhanced search with fuzzy matching and relevance scoring
-      const enhancedQuery = createSmartSearchQuery(searchQuery)
-      
-      // Get all resources for smart matching (in production, you'd use PostgreSQL full-text search)
-      const { data, error } = await supabase
-        .from('resources')
-        .select(`
-          *,
-          class:classes(
-            *,
-            school:schools(*),
-            subject:subjects(*),
-            teacher:teachers(*)
-          ),
-          uploader:users(*),
-          ai_derivative:ai_derivatives(*),
-          files(*),
-          tags:resource_tags(tag:tags(*))
-        `)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-
-      // Transform the data to flatten tags
-      let transformedData = data?.map(resource => ({
-        ...resource,
-        tags: resource.tags?.map((rt: { tag: { name: string } }) => rt.tag) || []
-      })) || []
-
-      // Apply smart search filtering and scoring
-      if (searchQuery.trim()) {
-        const queryLower = searchQuery.toLowerCase()
-        const enhancedQueryLower = enhancedQuery.toLowerCase()
-        
-        transformedData = transformedData
-          .filter(resource => {
-            // Check various fields for matches (including fuzzy)
-            const titleMatch = resource.title?.toLowerCase().includes(queryLower) ||
-                              resource.title?.toLowerCase().includes(enhancedQueryLower)
-            
-            const classMatch = resource.class?.title?.toLowerCase().includes(queryLower) ||
-                              resource.class?.code?.toLowerCase().includes(queryLower) ||
-                              resource.class?.title?.toLowerCase().includes(enhancedQueryLower)
-            
-            const subjectMatch = resource.class?.subject?.name?.toLowerCase().includes(queryLower) ||
-                               resource.class?.subject?.name?.toLowerCase().includes(enhancedQueryLower)
-            
-            const schoolMatch = resource.class?.school?.name?.toLowerCase().includes(queryLower) ||
-                              resource.class?.school?.name?.toLowerCase().includes(enhancedQueryLower)
-                              
-            const teacherMatch = resource.class?.teacher?.name?.toLowerCase().includes(queryLower) ||
-                               resource.class?.teacher?.name?.toLowerCase().includes(enhancedQueryLower)
-            
-            // Fuzzy matching for common typos
-            const fuzzyMatches = [
-              resource.title,
-              resource.class?.title,
-              resource.class?.subject?.name,
-              resource.class?.school?.name,
-              resource.class?.teacher?.name
-            ].some(field => {
-              if (!field) return false
-              // Simple fuzzy matching - check if query is close to field
-              const fieldLower = field.toLowerCase()
-              const words = queryLower.split(/\s+/)
-              return words.some(word => {
-                if (word.length < 3) return false
-                // Check for partial matches and common typos
-                for (let i = 0; i <= fieldLower.length - word.length; i++) {
-                  const substr = fieldLower.substr(i, word.length)
-                  const distance = levenshteinDistance(word, substr)
-                  if (distance <= Math.max(1, Math.floor(word.length * 0.2))) {
-                    return true
-                  }
-                }
-                return false
-              })
-            })
-            
-            return titleMatch || classMatch || subjectMatch || schoolMatch || teacherMatch || fuzzyMatches
-          })
-          .map(resource => ({
-            ...resource,
-            relevanceScore: scoreRelevance(searchQuery, resource)
-          }))
-          .sort((a, b) => (b as Resource & { relevanceScore: number }).relevanceScore - (a as Resource & { relevanceScore: number }).relevanceScore)
-      }
-
-      setResources(transformedData)
-    } catch (error) {
-      console.error('Error searching resources:', error)
-      // Fallback to simple search if fuzzy search fails
-      try {
-        const { data, error } = await supabase
-          .from('resources')
-          .select(`
-            *,
-            class:classes(
-              *,
-              school:schools(*),
-              subject:subjects(*),
-              teacher:teachers(*)
-            ),
-            uploader:users(*),
-            ai_derivative:ai_derivatives(*),
-            files(*),
-            tags:resource_tags(tag:tags(*))
-          `)
-          .or(`title.ilike.%${searchQuery}%,classes.title.ilike.%${searchQuery}%,classes.code.ilike.%${searchQuery}%`)
-          .order('created_at', { ascending: false })
-
-        if (error) throw error
-
-        const transformedData = data?.map(resource => ({
-          ...resource,
-          tags: resource.tags?.map((rt: { tag: { name: string } }) => rt.tag) || []
-        })) || []
-
-        setResources(transformedData)
-      } catch (fallbackError) {
-        console.error('Fallback search also failed:', fallbackError)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Helper function for Levenshtein distance
-  function levenshteinDistance(str1: string, str2: string): number {
-    const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null))
-
-    for (let i = 0; i <= str1.length; i++) {
-      matrix[0][i] = i
-    }
-
-    for (let j = 0; j <= str2.length; j++) {
-      matrix[j][0] = j
-    }
-
-    for (let j = 1; j <= str2.length; j++) {
-      for (let i = 1; i <= str1.length; i++) {
-        const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1
-        matrix[j][i] = Math.min(
-          matrix[j][i - 1] + 1,
-          matrix[j - 1][i] + 1,
-          matrix[j - 1][i - 1] + indicator
-        )
-      }
-    }
-
-    return matrix[str2.length][str1.length]
-  }
-
   const fetchFilterOptions = async () => {
     try {
       const [schoolsRes, subjectsRes, teachersRes] = await Promise.all([
-        supabase.from('schools').select('id, name').order('name'),
-        supabase.from('subjects').select('id, name').order('name'),
-        supabase.from('teachers').select('id, name').order('name')
+        supabase.from('schools').select('id, name').order('name').limit(100),
+        supabase.from('subjects').select('id, name').order('name').limit(100),
+        supabase.from('teachers').select('id, name').order('name').limit(100)
       ])
 
       setSchools(schoolsRes.data || [])
@@ -226,7 +144,7 @@ function SearchPageContent() {
 
   const handleVote = async (resourceId: string, value: 1 | -1) => {
     if (!user) return
-    
+
     try {
       // Check if user already voted
       const { data: existingVote } = await supabase
@@ -261,7 +179,7 @@ function SearchPageContent() {
           })
       }
 
-      // Log voting activity
+      // Log voting activity (best-effort, don't block on errors)
       const resource = resources.find(r => r.id === resourceId)
       if (resource) {
         const { logActivity } = await import('@/lib/activity')
@@ -279,19 +197,25 @@ function SearchPageContent() {
         }
       }
 
-      // Refresh search results to show updated vote count
-      if (query) {
-        searchResources(query)
-      }
+      // Refresh current page
+      searchResources(query, 0)
     } catch (error) {
       console.error('Error voting:', error)
     }
   }
 
+  const loadMore = useCallback(() => {
+    if (!loading && hasMore) {
+      const nextPage = page + 1
+      setPage(nextPage)
+      searchResources(query, nextPage)
+    }
+  }, [loading, hasMore, page, query, searchResources])
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-      
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Search Results</h1>
@@ -300,7 +224,7 @@ function SearchPageContent() {
 
         {/* Filters */}
         <div className="mb-8">
-          <FacetFilters 
+          <FacetFilters
             schools={schools}
             subjects={subjects}
             teachers={teachers}
@@ -312,28 +236,50 @@ function SearchPageContent() {
           <div>
             <div className="mb-6">
               <p className="text-gray-600">
-                {loading ? 'Searching...' : `${resources.length} results for "${query}"`}
+                {loading && page === 0 ? 'Searching...' : `${resources.length} results for "${query}"`}
               </p>
             </div>
 
-            {loading ? (
+            {loading && page === 0 ? (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {[...Array(6)].map((_, i) => (
                   <div key={i} className="h-64 bg-gray-200 rounded-lg animate-pulse" />
                 ))}
               </div>
             ) : resources.length > 0 ? (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {resources.map((resource) => (
-                  <ResourceCard
-                    key={resource.id}
-                    resource={resource}
-                    onVote={handleVote}
-                    blurredPreview={!user || (user?.id !== resource.uploader?.id && !viewedResources.includes(resource.id))}
-                    hasBeenViewed={!!user && viewedResources.includes(resource.id)}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {resources.map((resource) => (
+                    <ResourceCard
+                      key={resource.id}
+                      resource={resource}
+                      onVote={handleVote}
+                      blurredPreview={!user || (user?.id !== resource.uploader?.id && !viewedResources.includes(resource.id))}
+                      hasBeenViewed={!!user && viewedResources.includes(resource.id)}
+                    />
+                  ))}
+                </div>
+
+                {/* Load More Button */}
+                {hasMore && (
+                  <div className="mt-8 flex justify-center">
+                    <button
+                      onClick={loadMore}
+                      disabled={loading}
+                      className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loading ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Loading...
+                        </div>
+                      ) : (
+                        'Load More'
+                      )}
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
                 <SearchIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />

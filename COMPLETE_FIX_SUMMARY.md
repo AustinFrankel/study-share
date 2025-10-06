@@ -135,12 +135,12 @@ Hydration failed because the server rendered text didn't match the client
 
 ### 🔄 Still To Do (User Actions):
 1. **Database Setup** (5 minutes):
-   - Go to: https://app.supabase.com/project/dnknanwmaekhtmpbpjpo/sql
+   - Go to: https://app.supabase.com/project/YOUR_PROJECT_ID/sql
    - Run the SQL from: `/scripts/setup-live-storage.sql`
    - Creates: `test_waitlist`, `live_test_uploads`, `test_purchases` tables
 
 2. **Storage Bucket** (2 minutes):
-   - Go to: https://app.supabase.com/project/dnknanwmaekhtmpbpjpo/storage/buckets
+   - Go to: https://app.supabase.com/project/YOUR_PROJECT_ID/storage/buckets
    - Verify "resources" bucket exists (or create it)
    - Set to public with 50MB file size limit
 
@@ -246,8 +246,8 @@ Hydration failed because the server rendered text didn't match the client
 - **Password**: `Austin11!`
 
 ### Supabase Dashboard:
-- **SQL Editor**: https://app.supabase.com/project/dnknanwmaekhtmpbpjpo/sql
-- **Storage**: https://app.supabase.com/project/dnknanwmaekhtmpbpjpo/storage/buckets
+- **SQL Editor**: https://app.supabase.com/project/YOUR_PROJECT_ID/sql
+- **Storage**: https://app.supabase.com/project/YOUR_PROJECT_ID/storage/buckets
 
 ---
 

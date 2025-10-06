@@ -60,20 +60,32 @@ export default function Home() {
 
   const fetchResources = async () => {
     try {
+      // Only select necessary columns to reduce data transfer
       const { data, error } = await supabase
         .from('resources')
         .select(`
-          *,
+          id,
+          title,
+          type,
+          created_at,
+          vote_count,
+          user_vote,
+          average_rating,
+          rating_count,
+          difficulty,
+          study_time,
+          uploader_id,
           class:classes(
-            *,
-            school:schools(*),
-            subject:subjects(*),
-            teacher:teachers(*)
+            id,
+            title,
+            code,
+            school:schools(id, name),
+            subject:subjects(id, name),
+            teacher:teachers(id, name)
           ),
-          uploader:users(*),
-          ai_derivative:ai_derivatives(*),
-          files(*),
-          tags:resource_tags(tag:tags(*))
+          uploader:users(id, handle, avatar_url),
+          ai_derivative:ai_derivatives(status),
+          files(id, mime)
         `)
         .order('created_at', { ascending: false })
         .limit(20)
