@@ -25,23 +25,44 @@ export async function GET(request: Request) {
         },
       }
     )
-    await supabase.auth.exchangeCodeForSession(code)
-
-    // Ensure user record is created after successful authentication
-    try {
-      const response = await fetch(`${origin}/api/ensure-user`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
+    
+    // Exchange code for session
+    const { data: sessionData, error: sessionError } = await supabase.auth.exchangeCodeForSession(code)
+    
+    if (!sessionError && sessionData?.session) {
+      // Ensure user record is created after successful authentication
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (user) {
+          // Check if user already exists in database
+          const { data: existingUser } = await supabase
+            .from('users')
+            .select('id')
+            .eq('id', user.id)
+            .single()
+          
+          if (!existingUser) {
+            // Create user record with server-side call
+            const ensureResponse = await fetch(`${origin}/api/ensure-user`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sessionData.session.access_token}`
+              }
+            })
+            
+            if (!ensureResponse.ok) {
+              console.error('Failed to ensure user:', await ensureResponse.text())
+            } else {
+              console.log('User created successfully')
+            }
+          }
         }
-      })
-      
-      if (!response.ok) {
-        console.error('Failed to ensure user:', await response.text())
+      } catch (ensureUserError) {
+        console.error('Error calling ensure-user:', ensureUserError)
+        // Don't block the redirect, user creation will be retried on next page load
       }
-    } catch (ensureUserError) {
-      console.error('Error calling ensure-user:', ensureUserError)
-      // Don't block the redirect, user creation will be retried on next page load
     }
   }
 

@@ -133,7 +133,7 @@ export default function ResourceCard({
               <img
                 src={`/api/file/${firstImageFile.id}`}
                 alt={resource.title}
-                className={`absolute inset-0 w-full h-full object-cover ${blurredPreview ? 'filter blur-sm scale-105' : ''}`}
+                className={`absolute inset-0 w-full h-full ${blurredPreview ? 'object-contain filter blur-md' : 'object-cover'}`}
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none'
                 }}
