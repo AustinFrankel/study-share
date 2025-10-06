@@ -1,103 +1,394 @@
-import Image from "next/image";
+'use client'
+
+import { useState, useEffect } from 'react'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { logActivity } from '@/lib/activity'
+import { Resource } from '@/lib/types'
+import { useAuth } from '@/contexts/AuthContext'
+import { getUserViewedResources } from '@/lib/access-gate'
+import Navigation from '@/components/Navigation'
+import SearchBar from '@/components/SearchBar'
+import FacetFilters from '@/components/FacetFilters'
+import ResourceCard from '@/components/ResourceCard'
+import Leaderboard from '@/components/Leaderboard'
+import SetupGuide from '@/components/SetupGuide'
+import { Button } from '@/components/ui/button'
+import { TrendingUp, BookOpen, Users, Star } from 'lucide-react'
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const { user } = useAuth()
+  const [resources, setResources] = useState<Resource[]>([])
+  const [loading, setLoading] = useState(true)
+  const [schools, setSchools] = useState([])
+  const [subjects, setSubjects] = useState([])
+  const [teachers, setTeachers] = useState([])
+  const [viewedResources, setViewedResources] = useState<string[]>([])
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    if (isSupabaseConfigured) {
+      fetchResources()
+      fetchFilterOptions()
+    } else {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (user && isSupabaseConfigured) {
+      fetchViewedResources()
+    } else {
+      setViewedResources([])
+    }
+  }, [user, isSupabaseConfigured])
+
+  const fetchViewedResources = async () => {
+    if (!user) {
+      setViewedResources([])
+      return
+    }
+    try {
+      const viewed = await getUserViewedResources(user.id)
+      setViewedResources(viewed)
+    } catch (error) {
+      console.error('Error fetching viewed resources:', error)
+      // Set empty array on error to prevent inconsistent state
+      setViewedResources([])
+    }
+  }
+
+  const fetchResources = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('resources')
+        .select(`
+          *,
+          class:classes(
+            *,
+            school:schools(*),
+            subject:subjects(*),
+            teacher:teachers(*)
+          ),
+          uploader:users(*),
+          ai_derivative:ai_derivatives(*),
+          files(*),
+          tags:resource_tags(tag:tags(*))
+        `)
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (error) {
+        // If tables don't exist yet, just show empty state
+        if (error.message.includes('does not exist') || error.message.includes('schema cache')) {
+          console.log('Database tables not set up yet. Please run the migrations first.')
+          setResources([])
+          return
+        }
+        throw error
+      }
+
+      // Transform the data to flatten tags
+      const transformedData = data?.map(resource => ({
+        ...resource,
+        tags: resource.tags?.map((rt: { tag: any }) => rt.tag) || []
+      })) || []
+
+      setResources(transformedData)
+    } catch (error) {
+      console.error('Error fetching resources:', error)
+      setResources([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchFilterOptions = async () => {
+    try {
+      const [schoolsRes, subjectsRes, teachersRes] = await Promise.all([
+        supabase.from('schools').select('id, name').order('name'),
+        supabase.from('subjects').select('id, name').order('name'),
+        supabase.from('teachers').select('id, name').order('name')
+      ])
+
+      setSchools((schoolsRes.data && schoolsRes.data.length > 0) ? schoolsRes.data : [
+        { id: 'demo-ucb', name: 'University of California, Berkeley' },
+        { id: 'demo-stanford', name: 'Stanford University' },
+        { id: 'demo-mit', name: 'MIT' },
+      ] as any)
+      setSubjects((subjectsRes.data && subjectsRes.data.length > 0) ? subjectsRes.data : [
+        { id: 'sub-math', name: 'Mathematics' },
+        { id: 'sub-cs', name: 'Computer Science' },
+        { id: 'sub-phys', name: 'Physics' },
+      ] as any)
+      setTeachers((teachersRes.data && teachersRes.data.length > 0) ? teachersRes.data : [
+        { id: 't-1', name: 'Dr. Sarah Johnson' },
+        { id: 't-2', name: 'Prof. Michael Chen' },
+      ] as any)
+    } catch (error) {
+      console.error('Error fetching filter options:', error)
+      setSchools([
+        { id: 'demo-ucb', name: 'University of California, Berkeley' },
+        { id: 'demo-stanford', name: 'Stanford University' },
+        { id: 'demo-mit', name: 'MIT' },
+      ] as any)
+      setSubjects([
+        { id: 'sub-math', name: 'Mathematics' },
+        { id: 'sub-cs', name: 'Computer Science' },
+        { id: 'sub-phys', name: 'Physics' },
+      ] as any)
+      setTeachers([
+        { id: 't-1', name: 'Dr. Sarah Johnson' },
+        { id: 't-2', name: 'Prof. Michael Chen' },
+      ] as any)
+    }
+  }
+
+  const handleVote = async (resourceId: string, value: 1 | -1) => {
+    if (!user) return
+    try {
+      // Check if user already voted
+      const { data: existingVote, error: fetchErr } = await supabase
+        .from('votes')
+        .select('*')
+        .eq('resource_id', resourceId)
+        .eq('voter_id', user.id)
+        .single()
+
+      if (fetchErr && fetchErr.code !== 'PGRST116') {
+        // Ignore "No rows" error (PGRST116). Any other error should throw
+        throw fetchErr
+      }
+
+      if (existingVote) {
+        if (existingVote.value === value) {
+          // Remove vote if clicking same button
+          await supabase
+            .from('votes')
+            .delete()
+            .eq('id', existingVote.id)
+        } else {
+          // Update vote if clicking different button
+          await supabase
+            .from('votes')
+            .update({ value })
+            .eq('id', existingVote.id)
+        }
+      } else {
+        // Create new vote
+        await supabase
+          .from('votes')
+          .insert({ resource_id: resourceId, voter_id: user.id, value })
+      }
+
+      // Optimistically update UI in-place
+      setResources(prev => prev.map(r => {
+        if (r.id !== resourceId) return r
+        const prevUserVote = (r as any).user_vote || 0
+        const nextUserVote = prevUserVote === value ? 0 : value
+        const prevCount = r.vote_count || 0
+        const nextCount = prevCount - prevUserVote + nextUserVote
+        return { ...r, vote_count: nextCount, user_vote: nextUserVote } as any
+      }))
+
+      // Log activity (best effort)
+      try {
+        await logActivity({
+          userId: user.id,
+          action: value === 1 ? 'upvote' : 'downvote',
+          resourceId,
+          resourceTitle: resources.find(r => r.id === resourceId)?.title || 'Unknown',
+          pointsChange: 0,
+          metadata: { vote_value: value }
+        })
+      } catch (e) {
+        console.warn('Failed to log voting activity:', e)
+      }
+    } catch (error) {
+      console.error('Error voting:', error)
+    }
+  }
+
+  const handleDelete = async (resourceId: string) => {
+    if (!user) return
+
+    const resourceToDelete = resources.find(r => r.id === resourceId)
+    const confirmMessage = `Are you sure you want to delete "${resourceToDelete?.title || 'this resource'}"? This action cannot be undone.`
+    
+    if (!window.confirm(confirmMessage)) {
+      return
+    }
+
+    try {
+      // Try to remove storage objects first (best-effort)
+      try {
+        const { data: fileRows } = await supabase
+          .from('files')
+          .select('path, storage_path')
+          .eq('resource_id', resourceId)
+        const paths = (fileRows || [])
+          .map((f: any) => f?.path || f?.storage_path)
+          .filter(Boolean)
+        if (paths.length > 0) {
+          await supabase.storage.from('resources').remove(paths)
+        }
+      } catch (storageErr) {
+        console.warn('Storage cleanup failed (non-critical):', storageErr)
+      }
+
+      // Clean up child table rows (works even if CASCADE not present). Ignore failures.
+      try { await supabase.from('files').delete().eq('resource_id', resourceId) } catch {}
+      try { await supabase.from('ai_derivatives').delete().eq('resource_id', resourceId) } catch {}
+      try { await supabase.from('resource_tags').delete().eq('resource_id', resourceId) } catch {}
+      try { await supabase.from('votes').delete().eq('resource_id', resourceId) } catch {}
+      try { await supabase.from('flags').delete().eq('resource_id', resourceId) } catch {}
+      try { await supabase.from('comments').delete().eq('resource_id', resourceId) } catch {}
+
+      // Delete the resource
+      const { error } = await supabase
+        .from('resources')
+        .delete()
+        .eq('id', resourceId)
+        .eq('uploader_id', user.id) // Additional safety check
+
+      if (error) throw error
+
+      // Remove points associated with the resource
+      try {
+        await supabase.from('points_ledger')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('resource_id', resourceId)
+      } catch (pointsError) {
+        console.warn('Failed to remove points (non-critical):', pointsError)
+      }
+      
+      // Log activity
+      await logActivity({
+        userId: user.id,
+        action: 'delete',
+        resourceId: resourceId,
+        resourceTitle: resourceToDelete?.title || 'Unknown Resource',
+        pointsChange: -1,
+        metadata: { deleted_from: 'homepage' }
+      })
+
+      // Update local state immediately
+      setResources(prev => prev.filter(r => r.id !== resourceId))
+      
+    } catch (error) {
+      console.error('Error deleting resource:', error)
+      alert('Failed to delete resource. Please try again.')
+    }
+  }
+
+  // Show setup guide if Supabase is not configured
+  if (!isSupabaseConfigured) {
+    return <SetupGuide />
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      <Navigation />
+      
+      <main className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-8 py-6 sm:py-8 md:py-10">
+        {/* Hero Section - Mobile Optimized */}
+        <div className="text-center mb-6 sm:mb-8 md:mb-10">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 sm:mb-3 px-2">
+            Study Resources for Your Classes
+          </h1>
+          <p className="text-sm sm:text-base md:text-lg text-gray-600 mb-5 sm:mb-6 max-w-3xl mx-auto px-4">
+            Find and share study materials specific to your school, teacher, and class. 
+            Get AI-powered practice questions from uploaded materials.
+          </p>
+          
+          {/* Search Bar - Improved Mobile Styling */}
+          <div className="max-w-4xl mx-auto mb-6 sm:mb-8 md:mb-10 px-2">
+            <SearchBar className="w-full" />
+          </div>
+          
+          {/* Features - Stack on Mobile */}
+          <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600 px-4">
+            <div className="flex items-center justify-center gap-2">
+              <BookOpen className="w-4 h-4 flex-shrink-0" />
+              <span>Class-specific materials</span>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <Star className="w-4 h-4 flex-shrink-0" />
+              <span>AI practice questions</span>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <Users className="w-4 h-4 flex-shrink-0" />
+              <span>Anonymous sharing</span>
+            </div>
+          </div>
         </div>
+
+        {/* Filters - Mobile Friendly */}
+        <div className="mb-6 sm:mb-8">
+          <FacetFilters 
+            schools={schools}
+            subjects={subjects}
+            teachers={teachers}
+          />
+        </div>
+
+        <div className="grid gap-8 lg:grid-cols-3 items-start">
+          {/* Recent Resources */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <TrendingUp className="w-6 h-6" />
+                Recent Resources
+              </h2>
+              <Button variant="outline" asChild>
+                <a href="/browse">View All</a>
+              </Button>
+            </div>
+
+            {loading ? (
+              <div className="grid gap-6 md:grid-cols-2">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-64 bg-gray-200 rounded-lg animate-pulse" />
+                ))}
+              </div>
+            ) : resources.length > 0 ? (
+              <div className="grid gap-6 md:grid-cols-2">
+                {resources.slice(0, 4).map((resource) => (
+                  <ResourceCard
+                    key={resource.id}
+                    resource={resource}
+                    onVote={handleVote}
+                    blurredPreview={!user || (user?.id !== resource.uploader?.id && !viewedResources.includes(resource.id))}
+                    isHomepageCard={true}
+                    hasBeenViewed={!!user && viewedResources.includes(resource.id)}
+                    onDelete={handleDelete}
+                    showDeleteOption={true}
+                    currentUserId={user?.id}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300 min-h-[420px] flex flex-col justify-center">
+                <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No resources yet</h3>
+                <p className="text-gray-600 mb-4">Be the first to upload study materials!</p>
+                <div className="flex justify-center">
+                  <Button asChild size="default" className="w-auto px-8">
+                    <a href="/upload">Upload Resource</a>
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Leaderboard Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-24">
+              <Leaderboard className="min-h-[420px]" />
+            </div>
+          </div>
+        </div>
+
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
-  );
+  )
 }

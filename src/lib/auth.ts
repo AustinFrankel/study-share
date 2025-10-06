@@ -1,0 +1,300 @@
+import { supabase } from './supabase'
+import { User } from './types'
+
+// Generate random handle components
+const ADJECTIVES = [
+  'cobalt', 'crimson', 'azure', 'golden', 'silver', 'emerald', 'violet', 'amber',
+  'coral', 'jade', 'ruby', 'sapphire', 'pearl', 'bronze', 'platinum', 'onyx'
+]
+
+const ANIMALS = [
+  'walrus', 'penguin', 'dolphin', 'octopus', 'tiger', 'eagle', 'wolf', 'bear',
+  'fox', 'owl', 'shark', 'whale', 'hawk', 'lynx', 'raven', 'falcon'
+]
+
+export function generateRandomHandle(): string {
+  const adjective = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)]
+  const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)]
+  const number = Math.floor(Math.random() * 1000)
+  return `${adjective}-${animal}-${number}`
+}
+
+export async function signInWithEmail(email: string) {
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`
+    }
+  })
+  return { error }
+}
+
+// Sign in with Google OAuth
+export async function signInWithGoogle() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`
+    }
+  })
+  return { data, error }
+}
+
+export async function signOut() {
+  const { error } = await supabase.auth.signOut()
+  return { error }
+}
+
+// Timeout wrapper for API calls
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      // Return a soft timeout to prevent crashing the UI. We resolve to a rejected-like shape
+      // only for fetch() calls, but for Supabase SDK calls we let the caller handle nulls.
+      // Here, reject with a tagged error that callers can treat as non-fatal.
+      const err: any = new Error(`Operation timed out after ${timeoutMs}ms`)
+      err.__softTimeout = true
+      reject(err)
+    }, timeoutMs)
+
+    promise
+      .then(resolve)
+      .catch(reject)
+      .finally(() => clearTimeout(timeoutId))
+  })
+}
+
+// Type-safe wrapper for Supabase queries with timeout
+async function queryWithTimeout<T>(queryBuilder: any, timeoutMs: number): Promise<T> {
+  return withTimeout(queryBuilder, timeoutMs)
+}
+
+// Type for Supabase query results
+interface SupabaseResult<T> {
+  data: T | null
+  error: any
+}
+
+export async function getCurrentUser(): Promise<User | null> {
+  try {
+    console.log('🔍 Getting current user...')
+    
+    // Get auth user with timeout
+    let authUser: any = null
+    let authError: any = null
+    try {
+      const result = await withTimeout(
+        supabase.auth.getUser(),
+        6000 // 6s for faster loading
+      )
+      authUser = result?.data?.user
+      authError = result?.error || null
+    } catch (e: any) {
+      if (e?.__softTimeout) {
+        console.warn('Auth getUser timeout; continuing without user')
+        return null
+      }
+      authError = e
+    }
+    
+    if (authError) {
+      console.error('❌ Auth error:', authError)
+      return null
+    }
+    
+    if (!authUser) {
+      console.log('ℹ️ No authenticated user')
+      return null
+    }
+
+    console.log('✅ Auth user found:', authUser.id)
+
+    // Check if user exists in our users table with timeout
+    let userData: any = null
+    let fetchError: any = null
+    try {
+      const res = await queryWithTimeout<SupabaseResult<User>>(
+        supabase
+          .from('users')
+          .select('*')
+          .eq('id', authUser.id)
+          .single(),
+        5000
+      )
+      userData = res?.data ?? null
+      fetchError = res?.error ?? null
+    } catch (e: any) {
+      if (e?.__softTimeout) {
+        console.warn('User row fetch timeout; returning null user')
+        return null
+      }
+      fetchError = e
+    }
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      // PGRST116 is "not found" - other errors should be logged
+      console.error('❌ Error fetching user data:', fetchError)
+      return null
+    }
+
+    if (userData) {
+      console.log('✅ User data found in database')
+      return userData
+    }
+
+    // If user doesn't exist, call the ensure-user API endpoint to create it
+    console.log('🔨 User not found, creating via API...')
+    
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      if (!session.session?.access_token) {
+        console.error('❌ No access token available for user creation')
+        return null
+      }
+
+      // Create user via API with timeout
+      let response: Response | null = null
+      try {
+        response = await withTimeout(
+          fetch('/api/ensure-user', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+          }),
+          12000
+        )
+      } catch (e: any) {
+        if (e?.__softTimeout) {
+          console.warn('ensure-user API timeout; falling back to direct creation')
+          return await createUserDirectly(authUser)
+        }
+        throw e
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('❌ Failed to create user via API:', response.status, errorText)
+        
+        // If API fails, try direct database creation as fallback
+        console.log('🔄 API failed, attempting direct database creation...')
+        return await createUserDirectly(authUser)
+      }
+
+      const result = await response.json()
+      console.log('✅ User creation API call successful')
+      
+      if (result.user) {
+        console.log('✅ User created:', result.user.handle)
+        return result.user
+      }
+      
+      // If no user in response, try fetching once more
+      const { data: newUserData } = await queryWithTimeout<SupabaseResult<User>>(
+        supabase
+          .from('users')
+          .select('*')
+          .eq('id', authUser.id)
+          .single(),
+        3000
+      )
+      
+      return newUserData || null
+    } catch (apiError) {
+      console.error("❌ Error ensuring user via API:", apiError)
+      
+      // Fallback to direct creation
+      console.log('🔄 API failed, attempting direct database creation...')
+      return await createUserDirectly(authUser)
+    }
+  } catch (e) {
+    console.error("❌ Error in getCurrentUser:", e)
+    return null
+  }
+}
+
+// Fallback function to create user directly if API fails
+async function createUserDirectly(authUser: any): Promise<User | null> {
+  try {
+    console.log('🔨 Creating user directly in database...')
+    
+    const handle = generateRandomHandle()
+    const { data: newUser, error: insertError } = await queryWithTimeout<SupabaseResult<User>>(
+      supabase
+        .from('users')
+        .insert({ 
+          id: authUser.id, 
+          handle, 
+          handle_version: 1
+        })
+        .select()
+        .single(),
+      5000 // 5 second timeout
+    )
+
+    if (insertError) {
+      // Handle duplicate key error (race condition)
+      if (insertError.code === '23505' || insertError.message?.includes('duplicate key value')) {
+        console.log('🔄 Race condition detected, fetching existing user')
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', authUser.id)
+          .single()
+        
+        return existingUser || null
+      }
+      
+      console.error('❌ Error creating user directly:', insertError)
+      return null
+    }
+
+    if (newUser) {
+      console.log('✅ User created directly:', newUser.handle)
+      return newUser
+    } else {
+      console.error('❌ No user data returned from insert')
+      return null
+    }
+  } catch (error) {
+    console.error('❌ Error in direct user creation:', error)
+    return null
+  }
+}
+
+export async function regenerateHandle(userId: string): Promise<{ handle?: string; error?: unknown }> {
+  try {
+    // Get the current session to include auth headers
+    const { data: session } = await supabase.auth.getSession()
+    if (!session.session?.access_token) {
+      return { error: 'Not authenticated' }
+    }
+
+    // Generate a new anonymous handle locally
+    const handle = generateRandomHandle()
+
+    // Persist the new handle to the database and bump handle_version
+    // Read current handle_version first
+    const { data: currentUser } = await supabase
+      .from('users')
+      .select('handle_version')
+      .eq('id', userId)
+      .single()
+
+    const nextVersion = (currentUser?.handle_version ?? 0) + 1
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ handle, handle_version: nextVersion })
+      .eq('id', userId)
+
+    if (updateError) {
+      return { error: updateError }
+    }
+
+    return { handle }
+  } catch (error) {
+    return { error }
+  }
+}
