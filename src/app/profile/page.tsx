@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase'
 import { User as UserType, Resource } from '@/lib/types'
 import Navigation from '@/components/Navigation'
 import Leaderboard from '@/components/Leaderboard'
+import UsernameEditor from '@/components/UsernameEditor'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -45,6 +46,7 @@ import {
   Loader2
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 function ProfilePageContent() {
   const { user, refreshUser } = useAuth()
@@ -69,7 +71,8 @@ function ProfilePageContent() {
   const [savingEdit, setSavingEdit] = useState(false)
   const [accessInfo, setAccessInfo] = useState<{ viewsThisMonth: number; maxViewsThisMonth: number; adsWatchedThisMonth: number; canView: boolean; canWatchAd: boolean } | null>(null)
   const [watchingAd, setWatchingAd] = useState(false)
-  
+  const [avatarUploading, setAvatarUploading] = useState(false)
+
   // Determine if viewing own profile or another user's profile
   const isOwnProfile = !targetUserHandle || (user && user.handle === targetUserHandle)
   const displayUser = isOwnProfile ? user : targetUser
@@ -213,6 +216,91 @@ function ProfilePageContent() {
   }
 
   // Removed toggle visibility since all resources are public by default
+
+  const handleRemoveAvatar = async () => {
+    if (!user) return
+    try {
+      setAvatarUploading(true)
+      // Attempt to remove existing avatar file (best effort)
+      const oldUrl = user.avatar_url
+      if (oldUrl) {
+        const idx = oldUrl.indexOf('/avatars/')
+        if (idx > -1) {
+          const path = oldUrl.substring(idx + '/avatars/'.length)
+          try {
+            await supabase.storage.from('avatars').remove([path])
+          } catch (e) {
+            console.warn('Failed to remove old avatar (non-critical):', e)
+          }
+        }
+      }
+      // Clear avatar_url in DB
+      await supabase.from('users').update({ avatar_url: null }).eq('id', user.id)
+      await refreshUser()
+    } catch (e) {
+      console.error('Failed to remove avatar:', e)
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) return
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file')
+      setTimeout(() => setError(''), 2500)
+      return
+    }
+    // 5MB limit
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image too large (max 5MB)')
+      setTimeout(() => setError(''), 2500)
+      return
+    }
+
+    setAvatarUploading(true)
+    try {
+      const filePath = `${user.id}/${Date.now()}-${file.name}`
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true
+      })
+      if (uploadError) throw uploadError
+
+      const { data: publicData } = await supabase.storage.from('avatars').getPublicUrl(filePath)
+      const publicUrl = publicData?.publicUrl
+      if (!publicUrl) throw new Error('Failed to get public URL')
+
+      // Optionally remove previous avatar
+      const oldUrl = user.avatar_url
+      if (oldUrl) {
+        const idx = oldUrl.indexOf('/avatars/')
+        if (idx > -1) {
+          const path = oldUrl.substring(idx + '/avatars/'.length)
+          try { await supabase.storage.from('avatars').remove([path]) } catch {}
+        }
+      }
+
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id)
+      if (updateError) throw updateError
+
+      await refreshUser()
+    } catch (e) {
+      console.error('Error uploading avatar:', e)
+      setError('Failed to upload avatar')
+      setTimeout(() => setError(''), 2500)
+    } finally {
+      setAvatarUploading(false)
+      // Clear input value so same file can be re-selected
+      e.currentTarget.value = ''
+    }
+  }
 
   const handleRemoveResource = async (resourceId: string) => {
     if (!user) {
@@ -693,11 +781,14 @@ function ProfilePageContent() {
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                          <span className="text-white font-bold text-lg">
+                        <Avatar className="w-12 h-12">
+                          {displayUser?.avatar_url && (
+                            <AvatarImage src={displayUser.avatar_url} alt={displayUser?.handle} />
+                          )}
+                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
                             {displayUser?.handle.split('-').map((word: string) => word[0]).join('').toUpperCase().slice(0, 2)}
-                          </span>
-                        </div>
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
                           <h2 className="text-xl font-mono font-semibold">{displayUser?.handle}</h2>
                           <p className="text-sm text-gray-600">
@@ -719,6 +810,36 @@ function ProfilePageContent() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
+                    {isOwnProfile && (
+                      <div className="mb-4">
+                        <div className="flex items-center gap-2">
+                          <input
+                            id="avatar-upload-input"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleAvatarFileChange}
+                          />
+                          <Button asChild size="sm" variant="outline" disabled={avatarUploading}>
+                            <label htmlFor="avatar-upload-input">
+                              {avatarUploading ? 'Uploading...' : 'Change photo'}
+                            </label>
+                          </Button>
+                          {user?.avatar_url && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={handleRemoveAvatar}
+                              disabled={avatarUploading}
+                            >
+                              Remove
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">PNG/JPG up to 5MB</p>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div className="text-center">
                         <div className="text-2xl font-bold text-blue-600">{stats?.totalPoints || 0}</div>
@@ -785,6 +906,15 @@ function ProfilePageContent() {
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Username Editor - Only show for own profile */}
+                {isOwnProfile && displayUser && (
+                  <UsernameEditor
+                    userId={displayUser.id}
+                    currentHandle={displayUser.handle}
+                    onHandleUpdated={refreshUser}
+                  />
+                )}
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -220,7 +220,7 @@ export async function getLeaderboard(
     const query = supabase
       .from('user_points')
       .select(
-        `user_id, total_points, user:users(handle)`
+        `user_id, total_points, user:users(handle, avatar_url)`
       )
       .order('total_points', { ascending: false })
       .limit(limit)
@@ -238,16 +238,20 @@ export async function getLeaderboard(
       throw error
     }
 
-    return (data as Array<{ user_id: string; total_points: number; user: { handle?: string } | Array<{ handle?: string }> }>)?.map((entry, index: number) => {
+    return (data as Array<{ user_id: string; total_points: number; user: { handle?: string; avatar_url?: string } | Array<{ handle?: string; avatar_url?: string }> }>)?.map((entry, index: number) => {
       const joinedUser = entry?.user
       const handle = Array.isArray(joinedUser)
         ? (joinedUser[0]?.handle || null)
         : joinedUser?.handle
+      const avatar_url = Array.isArray(joinedUser)
+        ? (joinedUser[0]?.avatar_url || undefined)
+        : joinedUser?.avatar_url
       return {
         rank: index + 1,
         userId: entry.user_id,
         handle: handle || `user-${String(entry.user_id).slice(0, 4)}`,
         points: entry.total_points,
+        avatar_url
       }
     }) || []
   } catch (error) {

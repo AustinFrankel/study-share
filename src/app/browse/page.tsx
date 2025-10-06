@@ -63,7 +63,7 @@ function BrowseContent() {
             subjects (name),
             teachers (name)
           ),
-          users (handle),
+          uploader:users(*),
           ai_derivatives (status),
           tags:resource_tags (
             tag:tags (name)

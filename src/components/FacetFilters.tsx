@@ -4,7 +4,7 @@ import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { IOSSelect } from '@/components/ui/ios-select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -171,198 +171,183 @@ function FacetFiltersContent({ schools = [], subjects = [], teachers = [] }: Fac
   }
 
   return (
-    <div className="space-y-3 sm:space-y-4">
-      {/* Filter Dropdowns - Stack on Mobile, Row on Desktop */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-2 sm:gap-3">
-        <Select value={selectedSchool} onValueChange={(value) => {
-          setSelectedSchool(value)
-          updateFilters('school', value)
-        }}>
-          <SelectTrigger className="w-full lg:w-[200px] xl:w-[220px] h-10 sm:h-11 rounded-lg sm:rounded-xl border-2 shadow-sm bg-blue-50 sm:bg-blue-100 border-blue-200 text-blue-800 hover:bg-blue-100 sm:hover:bg-blue-200 text-sm sm:text-base">
-            <SelectValue placeholder="Select School" />
-          </SelectTrigger>
-          <SelectContent>
-            {schools.map((school) => (
-              <SelectItem key={school.id} value={school.id}>
-                {school.name}
-              </SelectItem>
-            ))}
-            <div className="p-2 border-t">
-              <Dialog open={showAddSchool} onOpenChange={setShowAddSchool}>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add School
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md mx-4 sm:mx-auto">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                      <School className="w-5 h-5" />
-                      Add New School
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 pt-4">
-                    <div>
-                      <Label htmlFor="school-name">School Name</Label>
-                      <Input
-                        id="school-name"
-                        value={newSchoolName}
-                        onChange={(e) => setNewSchoolName(e.target.value)}
-                        placeholder="Enter school name..."
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !addingSchool) {
-                            handleAddSchool()
-                          }
-                        }}
-                      />
-                    </div>
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        onClick={handleAddSchool}
-                        disabled={!newSchoolName.trim() || addingSchool}
-                        className="flex-1"
-                      >
-                        {addingSchool ? 'Adding...' : 'Add School'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setShowAddSchool(false)
-                          setNewSchoolName('')
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
+    <div className="space-y-2.5 sm:space-y-3">
+      {/* Filter Dropdowns - Horizontal Mobile Layout */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
+        {/* School Select */}
+        <IOSSelect
+          value={selectedSchool}
+          onValueChange={(value) => {
+            setSelectedSchool(value)
+            updateFilters('school', value)
+          }}
+          placeholder="🏫 School"
+          options={schools}
+          triggerClassName="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-300 text-blue-900 hover:from-blue-100 hover:to-blue-200 hover:border-blue-400 focus:ring-blue-500 shadow-blue-100"
+          footer={
+            <Dialog open={showAddSchool} onOpenChange={setShowAddSchool}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" className="w-full justify-start text-blue-700 hover:text-blue-800 hover:bg-blue-100 text-sm rounded-none py-3 font-medium">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add New School
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md mx-4 sm:mx-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <School className="w-5 h-5" />
+                    Add New School
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                  <div>
+                    <Label htmlFor="school-name">School Name</Label>
+                    <Input
+                      id="school-name"
+                      value={newSchoolName}
+                      onChange={(e) => setNewSchoolName(e.target.value)}
+                      placeholder="Enter school name..."
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !addingSchool) {
+                          handleAddSchool()
+                        }
+                      }}
+                    />
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </SelectContent>
-        </Select>
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      onClick={handleAddSchool}
+                      disabled={!newSchoolName.trim() || addingSchool}
+                      className="flex-1"
+                    >
+                      {addingSchool ? 'Adding...' : 'Add School'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowAddSchool(false)
+                        setNewSchoolName('')
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          }
+        />
 
-        <Select value={selectedSubject} onValueChange={(value) => {
-          setSelectedSubject(value)
-          updateFilters('subject', value)
-        }}>
-          <SelectTrigger className="w-full lg:w-[180px] xl:w-[200px] h-10 sm:h-11 rounded-lg sm:rounded-xl border-2 shadow-sm bg-green-50 sm:bg-green-100 border-green-200 text-green-800 hover:bg-green-100 sm:hover:bg-green-200 text-sm sm:text-base">
-            <SelectValue placeholder="Select Subject" />
-          </SelectTrigger>
-          <SelectContent>
-            {subjects.map((subject) => (
-              <SelectItem key={subject.id} value={subject.id}>
-                {subject.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Subject Select */}
+        <IOSSelect
+          value={selectedSubject}
+          onValueChange={(value) => {
+            setSelectedSubject(value)
+            updateFilters('subject', value)
+          }}
+          placeholder="📚 Subject"
+          options={subjects}
+          triggerClassName="bg-gradient-to-r from-green-50 to-emerald-100 border-green-300 text-green-900 hover:from-green-100 hover:to-emerald-200 hover:border-green-400 focus:ring-green-500 shadow-green-100"
+        />
 
-        <Select 
-          value={selectedTeacher} 
+        {/* Teacher Select */}
+        <IOSSelect
+          value={selectedTeacher}
           onValueChange={(value) => {
             setSelectedTeacher(value)
             updateFilters('teacher', value)
           }}
-        >
-          <SelectTrigger className="w-full lg:w-[180px] xl:w-[200px] h-10 sm:h-11 rounded-lg sm:rounded-xl border-2 shadow-sm bg-purple-50 sm:bg-purple-100 border-purple-200 text-purple-800 hover:bg-purple-100 sm:hover:bg-purple-200 text-sm sm:text-base">
-            <SelectValue 
-              placeholder={"Select Teacher"} 
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {filteredTeachers.length > 0 && filteredTeachers.map((teacher) => (
-              <SelectItem key={teacher.id} value={teacher.id}>
-                {teacher.name}
-              </SelectItem>
-            ))}
-            <div className="p-2 border-t">
-              <Dialog open={showAddTeacher} onOpenChange={setShowAddTeacher}>
-                <DialogTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start text-purple-600 hover:text-purple-700 hover:bg-purple-50 text-sm"
-                    disabled={!selectedSchool}
-                  >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    {selectedSchool ? 'Add Teacher' : 'Select School First'}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md mx-4 sm:mx-auto">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                      <UserPlus className="w-5 h-5" />
-                      Add New Teacher
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 pt-4">
-                    <div>
-                      <Label htmlFor="teacher-name" className="text-sm">Teacher Name</Label>
-                      <Input
-                        id="teacher-name"
-                        value={newTeacherName}
-                        onChange={(e) => setNewTeacherName(e.target.value)}
-                        placeholder="Enter teacher name..."
-                        className="h-10 sm:h-11"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !addingTeacher) {
-                            handleAddTeacher()
-                          }
-                        }}
-                      />
-                    </div>
-                    {selectedSchool && (
-                      <div className="text-sm text-gray-600">
-                        Adding to: <strong>{schools.find(s => s.id === selectedSchool)?.name}</strong>
-                      </div>
-                    )}
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        onClick={handleAddTeacher}
-                        disabled={!newTeacherName.trim() || !selectedSchool || addingTeacher}
-                        className="flex-1"
-                      >
-                        {addingTeacher ? 'Adding...' : 'Add Teacher'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setShowAddTeacher(false)
-                          setNewTeacherName('')
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
+          placeholder={selectedSchool ? "👨‍🏫 Teacher" : "Teacher"}
+          options={filteredTeachers}
+          disabled={!selectedSchool}
+          triggerClassName="bg-gradient-to-r from-purple-50 to-violet-100 border-purple-300 text-purple-900 hover:from-purple-100 hover:to-violet-200 hover:border-purple-400 focus:ring-purple-500 shadow-purple-100"
+          footer={
+            <Dialog open={showAddTeacher} onOpenChange={setShowAddTeacher}>
+              <DialogTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-purple-700 hover:text-purple-800 hover:bg-purple-100 text-sm rounded-none py-3 font-medium"
+                  disabled={!selectedSchool}
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  {selectedSchool ? 'Add Teacher' : 'School First'}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md mx-4 sm:mx-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <UserPlus className="w-5 h-5" />
+                    Add New Teacher
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                  <div>
+                    <Label htmlFor="teacher-name" className="text-sm">Teacher Name</Label>
+                    <Input
+                      id="teacher-name"
+                      value={newTeacherName}
+                      onChange={(e) => setNewTeacherName(e.target.value)}
+                      placeholder="Enter teacher name..."
+                      className="h-10 sm:h-11"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !addingTeacher) {
+                          handleAddTeacher()
+                        }
+                      }}
+                    />
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </SelectContent>
-        </Select>
+                  {selectedSchool && (
+                    <div className="text-sm text-gray-600">
+                      Adding to: <strong>{schools.find(s => s.id === selectedSchool)?.name}</strong>
+                    </div>
+                  )}
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      onClick={handleAddTeacher}
+                      disabled={!newTeacherName.trim() || !selectedSchool || addingTeacher}
+                      className="flex-1"
+                    >
+                      {addingTeacher ? 'Adding...' : 'Add Teacher'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowAddTeacher(false)
+                        setNewTeacherName('')
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          }
+        />
 
-        <Select value={selectedType} onValueChange={(value) => {
-          setSelectedType(value)
-          updateFilters('type', value)
-        }}>
-          <SelectTrigger className="w-full lg:w-[160px] xl:w-[180px] h-10 sm:h-11 rounded-lg sm:rounded-xl border-2 shadow-sm bg-yellow-50 sm:bg-yellow-100 border-yellow-200 text-yellow-800 hover:bg-yellow-100 sm:hover:bg-yellow-200 text-sm sm:text-base">
-            <SelectValue placeholder="Select Type" />
-          </SelectTrigger>
-          <SelectContent>
-            {RESOURCE_TYPES.map((type) => (
-              <SelectItem key={type.value} value={type.value}>
-                {type.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {hasActiveFilters && (
-          <Button variant="outline" onClick={clearAllFilters} className="text-sm">
-            Clear All
-          </Button>
-        )}
+        {/* Type Select */}
+        <IOSSelect
+          value={selectedType}
+          onValueChange={(value) => {
+            setSelectedType(value)
+            updateFilters('type', value)
+          }}
+          placeholder="📝 Type"
+          options={RESOURCE_TYPES.map(t => ({ id: t.value, name: t.label }))}
+          triggerClassName="bg-gradient-to-r from-yellow-50 to-amber-100 border-yellow-300 text-yellow-900 hover:from-yellow-100 hover:to-amber-200 hover:border-yellow-400 focus:ring-yellow-500 shadow-yellow-100"
+        />
       </div>
+
+      {/* Clear All Filters - Full Width Below */}
+      {hasActiveFilters && (
+        <Button 
+          variant="outline" 
+          onClick={clearAllFilters} 
+          className="w-full text-sm h-9 rounded-xl border-2 hover:bg-gray-100 hover:border-gray-400 font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+        >
+          Clear All Filters
+        </Button>
+      )}
 
       {/* Active filter badges */}
       {hasActiveFilters && (

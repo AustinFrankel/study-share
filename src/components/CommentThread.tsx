@@ -7,7 +7,7 @@ import { containsProfanity } from '@/lib/profanity-filter'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { MessageCircle, Reply, ChevronUp, ChevronDown, User as UserIcon, Trophy, Calendar, ArrowUp, ArrowDown } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
@@ -36,10 +36,14 @@ function CommentItem({ comment, currentUser, onReply, onVote, depth = 0 }: Comme
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-lg">
-                {user.handle.split('-').map(word => word[0]).join('').toUpperCase().slice(0, 2)}
-              </span>
+            <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              {user.avatar_url ? (
+                <img src={user.avatar_url} alt={user.handle} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white font-bold text-lg">
+                  {user.handle.split('-').map(word => word[0]).join('').toUpperCase().slice(0, 2)}
+                </span>
+              )}
             </div>
             <div>
               <h2 className="text-xl font-mono font-semibold">{user.handle}</h2>
@@ -107,6 +111,9 @@ function CommentItem({ comment, currentUser, onReply, onVote, depth = 0 }: Comme
               disabled={!comment.author}
             >
               <Avatar className="w-8 h-8">
+                {comment.author?.avatar_url && (
+                  <AvatarImage src={comment.author.avatar_url} alt={comment.author.handle} />
+                )}
                 <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-purple-600 text-white">
                   {comment.author ? getInitials(comment.author.handle) : '?'}
                 </AvatarFallback>

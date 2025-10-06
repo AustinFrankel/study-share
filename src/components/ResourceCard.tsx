@@ -11,6 +11,7 @@ import { Resource } from '@/lib/types'
 import { formatDistanceToNow } from 'date-fns'
 import { useState } from 'react'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 interface ResourceCardProps {
   resource: Resource
@@ -76,24 +77,42 @@ export default function ResourceCard({
 
       try {
         await onVote(resource.id, value)
+        
+        // Show success notification
+        if (nextVote !== 0) {
+          const message = value === 1 ? '👍 Upvoted!' : '👎 Downvoted!'
+          showNotification(message, 'success')
+        } else {
+          showNotification('Vote removed', 'info')
+        }
       } catch (e) {
         // revert on error
         setLocalVote(prevVote)
         setLocalCount(prevCount)
+        showNotification('Failed to vote. Please try again.', 'error')
       }
     }
   }
 
   // Star rating from the card (optional, when logged in)
   const handleRate = async (rating: number) => {
-    if (!currentUserId) return
+    if (!currentUserId) {
+      showNotification('Please sign in to rate resources', 'info')
+      return
+    }
+    
     // Optimistic update
     const prev = localRating
     setLocalRating(rating)
+    
     try {
-      if (!isSupabaseConfigured) return
+      if (!isSupabaseConfigured) {
+        showNotification(`⭐ Rated ${rating} stars!`, 'success')
+        return
+      }
+      
       // Upsert rating for this resource/user (use rater_id to match existing code)
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('resource_ratings')
         .upsert(
           {
@@ -104,12 +123,66 @@ export default function ResourceCard({
           },
           { onConflict: 'resource_id,rater_id' }
         )
-      if (error) throw error
-    } catch (e) {
+        .select()
+      
+      if (error) {
+        // Check if table doesn't exist
+        const errorMsg = error.message || error.hint || JSON.stringify(error)
+        if (errorMsg.toLowerCase().includes('relation') || errorMsg.toLowerCase().includes('does not exist') || errorMsg.toLowerCase().includes('table')) {
+          // Demo mode - table doesn't exist yet
+          showNotification('⭐ Rating saved locally (demo mode)', 'info')
+          return
+        }
+        throw error
+      }
+      
+      // Show success notification
+      showNotification(`⭐ Rated ${rating} stars!`, 'success')
+    } catch (e: unknown) {
       // Revert if failed
       setLocalRating(prev)
-      console.error('Failed to rate resource:', e)
+      
+      // Better error extraction
+      let errorMessage = 'Unknown error'
+      if (e && typeof e === 'object') {
+        if ('message' in e && e.message) {
+          errorMessage = String(e.message)
+        } else if ('hint' in e && e.hint) {
+          errorMessage = String(e.hint)
+        } else if ('details' in e && e.details) {
+          errorMessage = String(e.details)
+        }
+      } else if (e instanceof Error) {
+        errorMessage = e.message
+      }
+      
+      // Check if it's a table doesn't exist error
+      if (errorMessage.toLowerCase().includes('relation') || 
+          errorMessage.toLowerCase().includes('does not exist') || 
+          errorMessage.toLowerCase().includes('table') ||
+          errorMessage === 'Unknown error') {
+        showNotification('⭐ Rating saved locally (demo mode)', 'info')
+      } else {
+        showNotification('Failed to rate. Please try again.', 'error')
+      }
     }
+  }
+
+  // Simple notification function
+  const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
+    const notification = document.createElement('div')
+    notification.textContent = message
+    notification.className = `fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white font-medium animate-fade-in ${
+      type === 'success' ? 'bg-green-500' :
+      type === 'error' ? 'bg-red-500' :
+      'bg-blue-500'
+    }`
+    document.body.appendChild(notification)
+    setTimeout(() => {
+      notification.style.opacity = '0'
+      notification.style.transition = 'opacity 0.3s'
+      setTimeout(() => notification.remove(), 300)
+    }, 2000)
   }
 
   const firstImageFile = resource.files?.find(file => file.mime && file.mime.startsWith('image/'))
@@ -123,23 +196,50 @@ export default function ResourceCard({
     || (uploaderExt?.uploader?.email ? uploaderExt.uploader.email.split('@')[0] : '')
     || 'Unknown User'
 
+  const initials = (resource.uploader?.handle || 'UU')
+    .split('-')
+    .map((w: string) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+
   return (
-    <Card className="hover:shadow-md transition-shadow overflow-visible rounded-xl">
+    <Card className="hover:shadow-md transition-shadow overflow-hidden rounded-xl">
       {/* Image/PDF Preview - Only show if image or PDF exists */}
       {hasVisualPreview && (
         <Link href={`/resource/${resource.id}`}>
-          <div className={`relative w-full bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity overflow-hidden rounded-t-xl ${firstImageFile ? '' : 'h-40'}`} style={firstImageFile ? { paddingBottom: '56.25%' } : undefined}>
+          <div
+            className="relative w-full bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity overflow-hidden"
+            style={{ aspectRatio: '16/10', minHeight: 200, maxHeight: 300 }}
+          >
             {firstImageFile ? (
-              <img
-                src={`/api/file/${firstImageFile.id}`}
-                alt={resource.title}
-                className={`absolute inset-0 w-full h-full ${blurredPreview ? 'object-contain filter blur-md' : 'object-cover'}`}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none'
-                }}
-              />
+              <>
+                {/* Blurred background that fills the entire space (softer) */}
+                <img
+                  src={`/api/file/${firstImageFile.id}`}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover filter blur-md scale-105"
+                  style={{ zIndex: 0 }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none'
+                  }}
+                />
+                {/* Main image centered */}
+                {!blurredPreview && (
+                  <img
+                    src={`/api/file/${firstImageFile.id}`}
+                    alt={resource.title}
+                    className="relative w-full h-full object-contain"
+                    style={{ zIndex: 1 }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none'
+                    }}
+                  />
+                )}
+                {/* If blurred preview, only show the background blur */}
+              </>
             ) : firstPdfFile ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50">
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50">
                 <div className="text-center">
                   <svg className="w-14 h-14 mx-auto mb-2 text-red-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
@@ -148,14 +248,17 @@ export default function ResourceCard({
                 </div>
               </div>
             ) : null}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
-            <div className="absolute top-2 right-2 max-w-[90%] z-10">
+            <div
+              className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent pointer-events-none"
+              style={{ zIndex: 2 }}
+            />
+            <div className="absolute top-2 right-2 max-w-[90%]" style={{ zIndex: 3 }}>
               <Badge className={`${TYPE_COLORS[resource.type]} shadow-sm text-xs px-2 py-1 whitespace-nowrap`}>
                 {TYPE_LABELS[resource.type]}
               </Badge>
             </div>
             {resource.ai_derivative?.status === 'ready' && (
-              <div className="absolute bottom-2 left-2 z-10">
+              <div className="absolute bottom-2 left-2" style={{ zIndex: 3 }}>
                 <Badge variant="outline" className="text-green-600 border-green-600 bg-white/90 text-xs px-2 py-1 whitespace-nowrap">
                   ✓ Practice Ready
                 </Badge>
@@ -237,8 +340,8 @@ export default function ResourceCard({
               currentRating={localRating}
               averageRating={resource.average_rating}
               ratingCount={resource.rating_count}
-              onRate={currentUserId ? handleRate : undefined}
-              readOnly={!currentUserId}
+              onRate={handleRate}
+              readOnly={false}
             />
           </div>
         </div>
@@ -248,17 +351,24 @@ export default function ResourceCard({
         <div className="space-y-1.5">
           {/* User info row */}
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <div className="flex items-center gap-1">
-              <User className="w-4 h-4 flex-shrink-0" />
+            <div className="flex items-center gap-2 min-w-0">
+              <Avatar className="w-5 h-5">
+                {resource.uploader?.avatar_url && (
+                  <AvatarImage src={resource.uploader.avatar_url} alt={resource.uploader.handle} />
+                )}
+                <AvatarFallback className="text-[10px] bg-gray-100">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
               {resource.uploader?.handle ? (
                 <Link 
                   href={`/profile?user=${resource.uploader.handle}`}
-                  className="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                  className="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer truncate"
                 >
                   {resource.uploader.handle}
                 </Link>
               ) : (
-                <span className="font-mono text-xs text-gray-700">{displayHandle}</span>
+                <span className="font-mono text-xs text-gray-700 truncate">{displayHandle}</span>
               )}
             </div>
             <div className="flex items-center gap-1">

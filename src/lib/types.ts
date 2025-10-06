@@ -3,6 +3,7 @@ export interface User {
   handle: string
   handle_version: number
   created_at: string
+  avatar_url?: string
 }
 
 export interface School {

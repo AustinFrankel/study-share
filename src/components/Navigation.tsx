@@ -6,12 +6,13 @@ import { useAuth } from '@/contexts/AuthContext'
 import { signInWithEmail, signInWithGoogle, signOut } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useState, useEffect } from 'react'
 import { Search, Upload, User, LogOut, Home, Bell } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useNotifications } from '@/hooks/useNotifications'
 import { formatDistanceToNow } from 'date-fns'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export default function Navigation() {
   const { user, loading, session } = useAuth()
@@ -177,9 +178,14 @@ export default function Navigation() {
             ) : user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-0 sm:space-x-2 h-8 sm:h-9 px-2 sm:px-4">
-                    <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="hidden md:inline font-mono text-sm">{user.handle}</span>
+                  <Button variant="ghost" className="flex items-center space-x-2 h-8 sm:h-9 px-2 sm:px-3">
+                    <Avatar className="w-6 h-6">
+                      {user.avatar_url && <AvatarImage src={user.avatar_url} alt={user.handle} />}
+                      <AvatarFallback className="text-[10px] bg-gray-100">
+                        {user.handle.split('-').map(w => w[0]).join('').toUpperCase().slice(0,2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden md:inline font-mono text-sm truncate max-w-[160px]">{user.handle}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -206,11 +212,11 @@ export default function Navigation() {
                   <span className="hidden sm:inline">Profile</span>
                 </Button>
                 <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-                  <DialogContent className="max-w-md mx-4 sm:mx-auto">
+                  <DialogContent className="max-w-md mx-auto w-[calc(100%-2rem)] sm:w-full max-h-[90vh] overflow-y-auto my-auto">
                     <DialogHeader>
-                      <DialogTitle className="text-lg sm:text-xl">Sign in to Study Share</DialogTitle>
+                      <DialogTitle className="text-xl sm:text-2xl text-center">Sign in to Study Share</DialogTitle>
                     </DialogHeader>
-                    <form onSubmit={handleSignIn} className="space-y-4">
+                    <form onSubmit={handleSignIn} className="space-y-4 pt-2">
                       <div>
                         <Input
                           type="email"
@@ -218,9 +224,10 @@ export default function Navigation() {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           required
+                          className="h-12 text-base"
                         />
                       </div>
-                      <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={authLoading}>
+                      <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 text-base font-semibold" disabled={authLoading}>
                         {authLoading ? (
                           <div className="flex items-center gap-2">
                             <div className="w-4 h-4 animate-spin border-2 border-white border-t-transparent rounded-full"></div>
@@ -243,7 +250,7 @@ export default function Navigation() {
                       <Button 
                         type="button" 
                         variant="outline" 
-                        className="w-full border-2 hover:bg-gray-50 hover:border-gray-300 py-3 h-12 font-medium transition-all" 
+                        className="w-full border-2 hover:bg-gray-50 hover:border-gray-300 h-12 font-medium transition-all" 
                         onClick={handleGoogleSignIn}
                         disabled={authLoading}
                       >
@@ -265,7 +272,7 @@ export default function Navigation() {
                         )}
                       </Button>
                       {authMessage && (
-                        <p className={`text-sm ${authMessage.includes('error') || authMessage.includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                        <p className={`text-sm text-center ${authMessage.includes('error') || authMessage.includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
                           {authMessage}
                         </p>
                       )}

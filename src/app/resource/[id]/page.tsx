@@ -24,6 +24,7 @@ import { Progress } from '@/components/ui/progress'
 import { ArrowLeft, Download, FileText, Image, AlertTriangle, Eye, EyeOff, MessageCircle, Trash2, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export default function ResourcePage() {
   const params = useParams()
@@ -303,6 +304,7 @@ export default function ResourcePage() {
         .eq('voter_id', user.id)
         .single()
 
+      let actionTaken = ''
       if (existingVote) {
         if (existingVote.value === value) {
           // Remove vote if clicking same button
@@ -310,12 +312,14 @@ export default function ResourcePage() {
             .from('votes')
             .delete()
             .eq('id', existingVote.id)
+          actionTaken = 'removed'
         } else {
           // Update vote if clicking different button
           await supabase
             .from('votes')
             .update({ value })
             .eq('id', existingVote.id)
+          actionTaken = value === 1 ? 'upvoted' : 'downvoted'
         }
       } else {
         // Create new vote
@@ -326,6 +330,16 @@ export default function ResourcePage() {
             voter_id: user.id,
             value
           })
+        actionTaken = value === 1 ? 'upvoted' : 'downvoted'
+      }
+
+      // Show notification
+      if (actionTaken === 'upvoted') {
+        showNotification('👍 Upvoted!', 'success')
+      } else if (actionTaken === 'downvoted') {
+        showNotification('👎 Downvoted!', 'success')
+      } else {
+        showNotification('Vote removed', 'info')
       }
 
       // Log voting activity
@@ -348,9 +362,27 @@ export default function ResourcePage() {
       fetchResource()
     } catch (error) {
       console.error('Error voting:', error)
+      showNotification('Failed to vote. Please try again.', 'error')
     } finally {
       setVotingLoading(false)
     }
+  }
+
+  // Simple notification function
+  const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
+    const notification = document.createElement('div')
+    notification.textContent = message
+    notification.className = `fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white font-medium animate-fade-in ${
+      type === 'success' ? 'bg-green-500' :
+      type === 'error' ? 'bg-red-500' :
+      'bg-blue-500'
+    }`
+    document.body.appendChild(notification)
+    setTimeout(() => {
+      notification.style.opacity = '0'
+      notification.style.transition = 'opacity 0.3s'
+      setTimeout(() => notification.remove(), 300)
+    }, 2000)
   }
 
   const handleRate = async (rating: number) => {
@@ -361,6 +393,7 @@ export default function ResourcePage() {
       if (!isSupabaseConfigured) {
         // Demo mode: update local state only
         setResource(prev => prev ? { ...prev, user_rating: rating } as Resource & { user_rating?: number } : prev)
+        showNotification(`⭐ Rated ${rating} stars!`, 'success')
       } else {
         // Upsert ensures rating is saved/updated in one call
         const { error: upsertError } = await supabase
@@ -375,6 +408,8 @@ export default function ResourcePage() {
             { onConflict: 'resource_id,rater_id' }
           )
         if (upsertError) throw upsertError
+        
+        showNotification(`⭐ Rated ${rating} stars!`, 'success')
       }
 
       // Log rating activity
@@ -396,6 +431,7 @@ export default function ResourcePage() {
       // Refresh resource to get updated rating
       fetchResource()
     } catch (error) {
+      showNotification('Failed to rate. Please try again.', 'error')
       // Provide detailed error info in dev overlay
       try {
         console.error('Error rating resource:', (error as Error)?.message || 'Unknown error')
@@ -793,11 +829,17 @@ export default function ResourcePage() {
             {/* Profile Section */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                {/* <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                   <span className="text-white font-bold text-sm">
                     {resource.uploader?.handle.split('-').map((word: string) => word[0]).join('').toUpperCase().slice(0, 2)}
                   </span>
-                </div>
+                </div> */}
+                <Avatar>
+                  <AvatarImage src={resource.uploader?.avatar_url} alt={resource.uploader?.handle} />
+                  <AvatarFallback>
+                    {resource.uploader?.handle.split('-').map((word: string) => word[0]).join('').toUpperCase().slice(0, 2)}
+                  </AvatarFallback>
+                </Avatar>
                 <div>
                   <div className="font-medium text-sm">
                     <Link 

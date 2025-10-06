@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Trophy, Medal, Award, Crown, TrendingUp, Calendar, Globe, ChevronDown, ChevronUp } from 'lucide-react'
 import { getLeaderboard } from '@/lib/gamification'
 
@@ -13,6 +13,7 @@ interface LeaderboardEntry {
   userId: string
   handle: string
   points: number
+  avatar_url?: string
 }
 
 interface LeaderboardProps {
@@ -40,7 +41,7 @@ export default function Leaderboard({ schoolId, className }: LeaderboardProps) {
         timeframe,
         showAll ? 50 : displayLimit // Fetch more when showing all
       )
-      setEntries(data)
+      setEntries(data as LeaderboardEntry[])
     } catch (error) {
       console.error('Error fetching leaderboard:', error)
     } finally {
@@ -188,6 +189,7 @@ export default function Leaderboard({ schoolId, className }: LeaderboardProps) {
 
                 {/* Avatar */}
                 <Avatar className="w-8 h-8">
+                  {entry.avatar_url && <AvatarImage src={entry.avatar_url} alt={entry.handle} />}
                   <AvatarFallback className="text-xs bg-gray-100">
                     {getInitials(entry.handle)}
                   </AvatarFallback>

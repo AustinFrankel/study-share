@@ -291,41 +291,41 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <Navigation />
       
-      <main className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-8 py-6 sm:py-8 md:py-10">
+      <main className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 md:py-8">
         {/* Hero Section - Mobile Optimized */}
-        <div className="text-center mb-6 sm:mb-8 md:mb-10">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 sm:mb-3 px-2">
+        <div className="text-center mb-5 sm:mb-6 md:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 sm:mb-3 px-2 leading-tight">
             Study Resources for Your Classes
           </h1>
-          <p className="text-sm sm:text-base md:text-lg text-gray-600 mb-5 sm:mb-6 max-w-3xl mx-auto px-4">
+          <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-5 max-w-2xl mx-auto px-4 leading-relaxed">
             Find and share study materials specific to your school, teacher, and class. 
             Get AI-powered practice questions from uploaded materials.
           </p>
           
           {/* Search Bar - Improved Mobile Styling */}
-          <div className="max-w-4xl mx-auto mb-6 sm:mb-8 md:mb-10 px-2">
+          <div className="max-w-4xl mx-auto mb-5 sm:mb-6 px-2">
             <SearchBar className="w-full" />
           </div>
           
           {/* Features - Stack on Mobile */}
-          <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600 px-4">
-            <div className="flex items-center justify-center gap-2">
-              <BookOpen className="w-4 h-4 flex-shrink-0" />
+          <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600 px-4 mb-2">
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+              <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-indigo-600" />
               <span>Class-specific materials</span>
             </div>
-            <div className="flex items-center justify-center gap-2">
-              <Star className="w-4 h-4 flex-shrink-0" />
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+              <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-indigo-600" />
               <span>AI practice questions</span>
             </div>
-            <div className="flex items-center justify-center gap-2">
-              <Users className="w-4 h-4 flex-shrink-0" />
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-indigo-600" />
               <span>Anonymous sharing</span>
             </div>
           </div>
         </div>
 
         {/* Filters - Mobile Friendly */}
-        <div className="mb-6 sm:mb-8">
+        <div className="mb-5 sm:mb-6">
           <FacetFilters 
             schools={schools}
             subjects={subjects}
@@ -333,27 +333,27 @@ export default function Home() {
           />
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-3 items-start">
+        <div className="grid gap-6 lg:gap-8 lg:grid-cols-3 items-start">
           {/* Recent Resources */}
           <div className="lg:col-span-2">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <TrendingUp className="w-6 h-6" />
+            <div className="flex items-center justify-between mb-4 sm:mb-5">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
                 Recent Resources
               </h2>
-              <Button variant="outline" asChild>
+              <Button variant="outline" asChild size="sm" className="text-sm">
                 <a href="/browse">View All</a>
               </Button>
             </div>
 
             {loading ? (
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
                 {[...Array(4)].map((_, i) => (
                   <div key={i} className="h-64 bg-gray-200 rounded-lg animate-pulse" />
                 ))}
               </div>
             ) : resources.length > 0 ? (
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
                 {resources.slice(0, 4).map((resource) => (
                   <ResourceCard
                     key={resource.id}
@@ -369,7 +369,7 @@ export default function Home() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300 min-h-[420px] flex flex-col justify-center">
+              <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300 min-h-[300px] flex flex-col justify-center">
                 <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No resources yet</h3>
                 <p className="text-gray-600 mb-4">Be the first to upload study materials!</p>
@@ -382,10 +382,10 @@ export default function Home() {
             )}
           </div>
 
-          {/* Leaderboard Sidebar */}
-          <div className="lg:col-span-1">
+          {/* Leaderboard Sidebar - Hidden on mobile by default */}
+          <div className="hidden lg:block lg:col-span-1">
             <div className="sticky top-24">
-              <Leaderboard className="min-h-[420px]" />
+              <Leaderboard className="min-h-[300px]" />
             </div>
           </div>
         </div>
