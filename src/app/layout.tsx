@@ -34,7 +34,9 @@ export default function RootLayout({
         <AuthProvider>
           <UploadProvider>
             <GlobalDropzone />
-            {children}
+            <div className="page-transition">
+              {children}
+            </div>
             <Footer />
           </UploadProvider>
         </AuthProvider>

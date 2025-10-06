@@ -7,7 +7,7 @@ import { Shield, Database, Eye, Lock, UserCheck, Globe, Settings, Mail } from 'l
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
       <Navigation />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mb-8">
