@@ -201,7 +201,7 @@ export default function Navigation() {
             ) : (
               /* No session - show profile button that triggers auth */
               <>
-                <Button onClick={handleProfileClick} className="h-8 sm:h-9 px-3 sm:px-4 text-sm">
+                <Button onClick={handleProfileClick} className="h-8 sm:h-9 px-3 sm:px-4 text-sm bg-indigo-600 hover:bg-indigo-700 text-white">
                   <User className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Profile</span>
                 </Button>

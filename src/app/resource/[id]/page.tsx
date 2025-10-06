@@ -52,10 +52,9 @@ export default function ResourcePage() {
 
   const checkAccessAndFetch = async () => {
     if (!user) {
-      // Anonymous users can view without limits
-      fetchResource()
-      fetchComments()
-      subscribeToComments()
+      // Anonymous users must sign in to view resources
+      setAccessBlocked(true)
+      setLoading(false)
       return
     }
 
