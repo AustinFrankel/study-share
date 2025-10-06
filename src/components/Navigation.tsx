@@ -73,9 +73,9 @@ export default function Navigation() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-indigo-100 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow-sm">
+    <nav className="sticky top-0 z-50 border-b border-indigo-100 bg-white backdrop-blur supports-[backdrop-filter]:bg-white/95 shadow-sm">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-14">
           {/* Logo - Always show full name */}
           <div className="flex items-center flex-shrink-0">
             <Link href="/" className="flex items-center space-x-2">
@@ -87,7 +87,7 @@ export default function Navigation() {
           {/* Navigation Buttons - Better spacing */}
           <div className="flex items-center gap-1.5 sm:gap-2 md:gap-2.5">
             {/* Upload button - Icon only on mobile */}
-            <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 sm:h-10 px-2.5 sm:px-4">
+            <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white h-8 sm:h-9 px-2.5 sm:px-4 text-sm">
               <Link href="/upload">
                 <Upload className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Upload</span>
@@ -95,12 +95,12 @@ export default function Navigation() {
             </Button>
 
             {/* Browse button - distinct color */}
-            <Button asChild className="bg-black hover:bg-neutral-900 text-white h-9 sm:h-10 px-2.5 sm:px-4">
+            <Button asChild className="bg-black hover:bg-neutral-900 text-white h-8 sm:h-9 px-2.5 sm:px-4 text-sm">
               <Link href="/browse">Browse</Link>
             </Button>
 
             {/* Live button */}
-            <Button asChild variant="outline" className="border-indigo-200 hover:bg-indigo-50 h-9 sm:h-10 px-2.5 sm:px-4 text-sm sm:text-base">
+            <Button asChild variant="outline" className="border-indigo-200 hover:bg-indigo-50 h-8 sm:h-9 px-2.5 sm:px-4 text-sm">
               <Link href="/live">
                 Live
               </Link>
@@ -110,7 +110,7 @@ export default function Navigation() {
             {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="relative h-9 w-9 sm:h-10 sm:w-10 p-0">
+                  <Button variant="ghost" size="sm" className="relative h-8 w-8 sm:h-9 sm:w-9 p-0">
                     <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
                     {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
@@ -171,13 +171,13 @@ export default function Navigation() {
 
             {/* Profile Section - Icon only on mobile, handle on desktop */}
             {loading ? (
-              <Button variant="ghost" disabled className="h-9 w-9 sm:h-10 sm:w-auto p-0 sm:px-4">
+              <Button variant="ghost" disabled className="h-8 w-8 sm:h-9 sm:w-auto p-0 sm:px-4">
                 <div className="w-4 h-4 animate-spin border-2 border-gray-300 border-t-gray-900 rounded-full"></div>
               </Button>
             ) : user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-0 sm:space-x-2 h-9 sm:h-10 px-2 sm:px-4">
+                  <Button variant="ghost" className="flex items-center space-x-0 sm:space-x-2 h-8 sm:h-9 px-2 sm:px-4">
                     <User className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span className="hidden md:inline font-mono text-sm">{user.handle}</span>
                   </Button>
@@ -194,14 +194,14 @@ export default function Navigation() {
               </DropdownMenu>
             ) : session ? (
               /* User has session but no user data yet - show loading state */
-              <Button variant="ghost" disabled className="h-9 w-9 sm:h-10 sm:w-auto p-0 sm:px-4">
+              <Button variant="ghost" disabled className="h-8 w-8 sm:h-9 sm:w-auto p-0 sm:px-4">
                 <User className="w-4 h-4 sm:mr-2" />
                 <div className="hidden sm:block w-3 h-3 animate-spin border-2 border-gray-300 border-t-gray-900 rounded-full"></div>
               </Button>
             ) : (
               /* No session - show profile button that triggers auth */
               <>
-                <Button onClick={handleProfileClick} className="h-9 sm:h-10 px-3 sm:px-4 text-sm">
+                <Button onClick={handleProfileClick} className="h-8 sm:h-9 px-3 sm:px-4 text-sm">
                   <User className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Profile</span>
                 </Button>

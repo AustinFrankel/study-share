@@ -119,6 +119,13 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Prevent overscroll bounce from showing background */
+    overscroll-behavior-y: none;
+  }
+  html {
+    /* Also prevent overscroll on html element */
+    overscroll-behavior-y: none;
+    background-color: white;
   }
 }
 

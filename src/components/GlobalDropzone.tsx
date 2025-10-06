@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 const generateId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`
 import { useUploadContext } from '@/contexts/UploadContext'
-import heic2any from 'heic2any'
 
 export default function GlobalDropzone() {
   const router = useRouter()
@@ -32,7 +31,7 @@ export default function GlobalDropzone() {
       }
     }
 
-    const onDrop = async (e: DragEvent) => {
+    const onDrop = (e: DragEvent) => {
       e.preventDefault()
       setIsDragging(false)
       
@@ -45,25 +44,16 @@ export default function GlobalDropzone() {
       const items = Array.from(e.dataTransfer?.files || [])
       if (items.length === 0) return
 
-      const converted: File[] = []
-      for (const f of items) {
-        const lower = f.name.toLowerCase()
-        if (f.type === 'image/heic' || f.type === 'image/heif' || lower.endsWith('.heic') || lower.endsWith('.heif')) {
-          try {
-            const blob = await heic2any({ blob: f as any, toType: 'image/jpeg', quality: 0.9 }) as Blob
-            const newName = f.name.replace(/\.(heic|heif)$/i, '.jpg')
-            const jpg = new File([blob], newName, { type: 'image/jpeg' })
-            converted.push(jpg)
-          } catch (err) {
-            console.warn('HEIC convert failed, skipping:', f.name, err)
-          }
-        } else {
-          converted.push(f)
-        }
-      }
-
       const allowed = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']
-      const files = converted
+      // HEIC conversion removed - just block HEIC files for now
+      const unsupportedFiles = items.filter(f => f.type === 'image/heic' || f.name.toLowerCase().endsWith('.heic'))
+      
+      if (unsupportedFiles.length > 0) {
+        alert(`HEIC format is not supported. Please convert ${unsupportedFiles.map(f => f.name).join(', ')} to JPG or PNG.`)
+        return
+      }
+      
+      const files = items
         .filter(f => allowed.includes(f.type))
         .map(file => ({ id: generateId(), file }))
       if (files.length === 0) {

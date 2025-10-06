@@ -118,22 +118,21 @@ export default function ResourceCard({
 
   // Compute a friendly uploader label
   const displayHandle = resource.uploader?.handle
-    || (resource as any)?.users?.handle
     || (resource as any)?.uploader?.username
     || ((resource as any)?.uploader?.email ? (resource as any).uploader.email.split('@')[0] : '')
-    || ''
+    || 'Unknown User'
 
   return (
-    <Card className="hover:shadow-md transition-shadow overflow-hidden rounded-xl">
+    <Card className="hover:shadow-md transition-shadow overflow-visible rounded-xl">
       {/* Image/PDF Preview - Only show if image or PDF exists */}
       {hasVisualPreview && (
         <Link href={`/resource/${resource.id}`}>
-          <div className={`relative w-full bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity overflow-hidden ${firstImageFile ? '' : 'h-40'}`} style={firstImageFile ? { paddingBottom: '56.25%' } : undefined}>
+          <div className={`relative w-full bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity overflow-hidden rounded-t-xl ${firstImageFile ? '' : 'h-40'}`} style={firstImageFile ? { paddingBottom: '56.25%' } : undefined}>
             {firstImageFile ? (
               <img
                 src={`/api/file/${firstImageFile.id}`}
                 alt={resource.title}
-                className={`absolute inset-0 w-full h-full object-contain ${blurredPreview ? 'filter blur-sm scale-105' : ''}`}
+                className={`absolute inset-0 w-full h-full object-cover ${blurredPreview ? 'filter blur-sm scale-105' : ''}`}
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none'
                 }}
@@ -148,9 +147,9 @@ export default function ResourceCard({
                 </div>
               </div>
             ) : null}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
-            <div className="absolute top-2 right-2 max-w-[90%] overflow-visible z-10">
-              <Badge className={`${TYPE_COLORS[resource.type]} shadow-sm text-xs px-2 py-1 whitespace-nowrap overflow-visible`}>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute top-2 right-2 max-w-[90%] z-10">
+              <Badge className={`${TYPE_COLORS[resource.type]} shadow-sm text-xs px-2 py-1 whitespace-nowrap`}>
                 {TYPE_LABELS[resource.type]}
               </Badge>
             </div>
@@ -173,16 +172,20 @@ export default function ResourceCard({
                 {resource.title}
               </h3>
             </Link>
-            <div className="flex items-center gap-2 mt-2 text-sm text-gray-600 min-w-0">
-              <GraduationCap className="w-4 h-4" />
-              <span className="truncate max-w-[16rem]" title={resource.class?.school?.name}>
-                {resource.class?.school?.name}
-              </span>
-              <span>•</span>
-              <BookOpen className="w-4 h-4" />
-              <span className="truncate max-w-[10rem]" title={resource.class?.subject?.name}>
-                {resource.class?.subject?.name}
-              </span>
+            <div className="flex items-center gap-2 mt-2 text-sm text-gray-600 flex-wrap">
+              <div className="flex items-center gap-1 min-w-0">
+                <GraduationCap className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate" style={{ maxWidth: '200px' }} title={resource.class?.school?.name}>
+                  {resource.class?.school?.name}
+                </span>
+              </div>
+              <span className="flex-shrink-0">•</span>
+              <div className="flex items-center gap-1 min-w-0">
+                <BookOpen className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate" style={{ maxWidth: '150px' }} title={resource.class?.subject?.name}>
+                  {resource.class?.subject?.name}
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
               <span>{resource.class?.teacher?.name}</span>
@@ -213,7 +216,7 @@ export default function ResourceCard({
           )}
         </div>
         {/* Meta row: difficulty/time + stars */}
-        <div className="mt-2 flex items-center justify-between gap-2 min-w-0 overflow-visible">
+        <div className="mt-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-gray-600 flex-shrink-0">
             {typeof resource.difficulty === 'number' && (
               <span className="whitespace-nowrap">Diff: {resource.difficulty}/5</span>
@@ -227,15 +230,16 @@ export default function ResourceCard({
               </span>
             )}
           </div>
-          <StarRating
-            resourceId={resource.id}
-            currentRating={localRating}
-            averageRating={resource.average_rating}
-            ratingCount={resource.rating_count}
-            onRate={currentUserId ? handleRate : undefined}
-            readOnly={!currentUserId}
-            className="flex-shrink-0"
-          />
+          <div className="flex-shrink-0">
+            <StarRating
+              resourceId={resource.id}
+              currentRating={localRating}
+              averageRating={resource.average_rating}
+              ratingCount={resource.rating_count}
+              onRate={currentUserId ? handleRate : undefined}
+              readOnly={!currentUserId}
+            />
+          </div>
         </div>
       </CardHeader>
 
@@ -253,16 +257,7 @@ export default function ResourceCard({
                   {resource.uploader.handle}
                 </Link>
               ) : (
-                displayHandle ? (
-                  <Link 
-                    href={`/profile?user=${displayHandle}`}
-                    className="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                  >
-                    {displayHandle}
-                  </Link>
-                ) : (
-                  <span className="font-mono text-xs text-gray-700">User</span>
-                )
+                <span className="font-mono text-xs text-gray-700">{displayHandle}</span>
               )}
             </div>
             <div className="flex items-center gap-1">
