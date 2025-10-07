@@ -4,7 +4,27 @@
 
 **Project ID:** `dnknanwmaekhthmpbpjpo`  
 **Project URL:** `https://dnknanwmaekhthmpbpjpo.supabase.co`  
-**Anon/Public Key:** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRua25hbndtYWVraHRtcGJwanBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxMjQ3MDksImV4cCI6MjA3MzcwMDcwOX0.B2rvyWyZJQclEAQRzzpqVY0ZHxWl5FwZ8cV-dJo82_o`
+**Anon/Public Key:*-- 6. Show success and verification
+SELECT 'test_resources' as table_name, COUNT(*) as row_count FROM public.test_resources
+UNION ALL
+SELECT 'test_waitlist' as table_name, COUNT(*) as row_count FROM public.test_waitlist
+UNION ALL
+SELECT 'resources' as table_name, COUNT(*) as row_count FROM public.resources
+UNION ALL
+SELECT 'files' as table_name, COUNT(*) as row_count FROM public.files
+UNION ALL
+SELECT 'users' as table_name, COUNT(*) as row_count FROM public.users;
+
+-- Show all policies
+SELECT 
+  schemaname,
+  tablename,
+  policyname,
+  permissive,
+  cmd
+FROM pg_policies 
+WHERE tablename IN ('test_resources', 'test_waitlist', 'resources', 'files', 'users')
+ORDER BY tablename, policyname;I1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRua25hbndtYWVraHRtcGJwanBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxMjQ3MDksImV4cCI6MjA3MzcwMDcwOX0.B2rvyWyZJQclEAQRzzpqVY0ZHxWl5FwZ8cV-dJo82_o`
 
 ---
 
@@ -84,27 +104,124 @@ CREATE POLICY "Public can view waitlist"
   ON public.test_waitlist FOR SELECT
   USING (true);
 
--- 3. Verify resources table exists and has public column
+-- 3. Create resources table if it doesn't exist (for file uploads)
+CREATE TABLE IF NOT EXISTS public.resources (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  subject text,
+  difficulty text,
+  study_time text,
+  uploader_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  public boolean DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Add public column if table existed but column was missing
 DO $$
 BEGIN
-  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'resources') THEN
-    -- Add public column if missing
-    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'resources' AND column_name = 'public') THEN
-      ALTER TABLE public.resources ADD COLUMN public boolean DEFAULT true;
-    END IF;
-    
-    -- Update all resources to be public
-    UPDATE public.resources SET public = true WHERE public IS NULL OR public = false;
-    
-    -- Ensure public read policy exists
-    DROP POLICY IF EXISTS "Anyone can view public resources" ON public.resources;
-    CREATE POLICY "Anyone can view public resources"
-      ON public.resources FOR SELECT
-      USING (public = true);
+  IF NOT EXISTS (
+    SELECT FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'resources' 
+    AND column_name = 'public'
+  ) THEN
+    ALTER TABLE public.resources ADD COLUMN public boolean DEFAULT true;
   END IF;
 END $$;
 
--- 4. Show success and verification
+-- Update existing resources to be public
+UPDATE public.resources SET public = true WHERE public IS NULL OR public = false;
+
+-- Create indexes for resources
+CREATE INDEX IF NOT EXISTS idx_resources_uploader ON public.resources(uploader_id);
+CREATE INDEX IF NOT EXISTS idx_resources_created ON public.resources(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_resources_public ON public.resources(public);
+
+-- Enable RLS for resources
+ALTER TABLE public.resources ENABLE ROW LEVEL SECURITY;
+
+-- Drop old policies
+DROP POLICY IF EXISTS "Anyone can view public resources" ON public.resources;
+DROP POLICY IF EXISTS "Resources are viewable by everyone" ON public.resources;
+DROP POLICY IF EXISTS "Authenticated users can create resources" ON public.resources;
+DROP POLICY IF EXISTS "Users can update own resources" ON public.resources;
+
+-- Create new policies
+CREATE POLICY "Public can view all resources"
+  ON public.resources FOR SELECT
+  USING (public = true);
+
+CREATE POLICY "Authenticated users can insert resources"
+  ON public.resources FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Users can update own resources"
+  ON public.resources FOR UPDATE
+  USING (auth.uid() = uploader_id);
+
+-- 4. Create files table for file attachments
+CREATE TABLE IF NOT EXISTS public.files (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  resource_id uuid REFERENCES public.resources(id) ON DELETE CASCADE,
+  file_name text NOT NULL,
+  file_path text NOT NULL,
+  file_size bigint,
+  mime_type text,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_files_resource ON public.files(resource_id);
+
+ALTER TABLE public.files ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can view files" ON public.files;
+DROP POLICY IF EXISTS "Authenticated users can insert files" ON public.files;
+
+CREATE POLICY "Public can view files"
+  ON public.files FOR SELECT
+  USING (true);
+
+CREATE POLICY "Authenticated users can insert files"
+  ON public.files FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+-- 5. Create users table if needed (for profiles)
+CREATE TABLE IF NOT EXISTS public.users (
+  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email text UNIQUE NOT NULL,
+  display_name text,
+  handle text UNIQUE,
+  bio text,
+  avatar_url text,
+  points integer DEFAULT 0,
+  level integer DEFAULT 1,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_handle ON public.users(handle);
+CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
+
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can view users" ON public.users;
+DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
+
+CREATE POLICY "Public can view users"
+  ON public.users FOR SELECT
+  USING (true);
+
+CREATE POLICY "Users can update own profile"
+  ON public.users FOR UPDATE
+  USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert own profile"
+  ON public.users FOR INSERT
+  WITH CHECK (auth.uid() = id);
+
+-- 6. Show success and verification
 SELECT 'test_resources' as table_name, COUNT(*) as row_count FROM public.test_resources
 UNION ALL
 SELECT 'test_waitlist' as table_name, COUNT(*) as row_count FROM public.test_waitlist
