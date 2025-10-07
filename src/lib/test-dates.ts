@@ -54,7 +54,7 @@ export const STANDARDIZED_TESTS_2025 = [
     id: 'act-jun',
     name: 'ACT',
     fullName: 'ACT - June',
-    date: new Date('2025-06-14:08:00:00'),
+    date: new Date('2025-06-14T08:00:00'),
     description: 'Standardized test for college admissions in the US',
     color: 'from-green-500 to-green-600',
     icon: '✏️',

@@ -184,8 +184,8 @@ export async function seedDatabase() {
     // 4. Create teachers
     console.log('Creating teachers...')
     const teachers: Array<{ school_id: string; name: string }> = []
-    schools.forEach(school => {
-      SAMPLE_TEACHERS.slice(0, 3).forEach(teacherName => {
+    schools.forEach((school: any) => {
+      SAMPLE_TEACHERS.slice(0, 3).forEach((teacherName: string) => {
         teachers.push({
           school_id: school.id,
           name: teacherName
@@ -204,8 +204,8 @@ export async function seedDatabase() {
     // 5. Create classes
     console.log('Creating classes...')
     const classes: Array<{ school_id: string; subject_id: string; teacher_id: string; title: string; code: string; term: string }> = []
-    createdTeachers.forEach(teacher => {
-      SAMPLE_CLASSES.slice(0, 3).forEach(classData => {
+    createdTeachers.forEach((teacher: any) => {
+      SAMPLE_CLASSES.slice(0, 3).forEach((classData: any) => {
         const randomSubject = subjects[Math.floor(Math.random() * subjects.length)]
         classes.push({
           school_id: teacher.school_id,
@@ -265,7 +265,7 @@ export async function seedDatabase() {
 
     // 7. Create AI derivatives
     console.log('Creating AI derivatives...')
-    const aiDerivatives = createdResources.map(resource => ({
+    const aiDerivatives = createdResources.map((resource: any) => ({
       resource_id: resource.id,
       status: 'ready' as const,
       summary: `Generated ${SAMPLE_STRUCTURED_CONTENT.items.length} practice questions from ${resource.title}`,
@@ -284,12 +284,12 @@ export async function seedDatabase() {
     // 8. Create votes
     console.log('Creating votes...')
     const votes: Array<{ resource_id: string; voter_id: string; value: number }> = []
-    createdResources.forEach(resource => {
+    createdResources.forEach((resource: any) => {
       // Random number of votes for each resource
       const numVotes = Math.floor(Math.random() * 10) + 1
       const voters = createdUsers.slice(0, numVotes)
-      
-      voters.forEach(voter => {
+
+      voters.forEach((voter: any) => {
         if (voter.id !== resource.uploader_id) { // Don't let users vote on their own resources
           votes.push({
             resource_id: resource.id,
@@ -311,7 +311,7 @@ export async function seedDatabase() {
     // 9. Create comments
     console.log('Creating comments...')
     const comments: Array<{ resource_id: string; author_id: string; body: string }> = []
-    createdResources.forEach(resource => {
+    createdResources.forEach((resource: any) => {
       // Random number of comments for each resource
       const numComments = Math.floor(Math.random() * 5) + 1
       
@@ -340,9 +340,9 @@ export async function seedDatabase() {
     const pointsEntries: Array<{ user_id: string; delta: number; reason: string }> = []
     
     // Award points for uploads
-    createdUsers.forEach(user => {
-      const userResources = createdResources.filter(r => r.uploader_id === user.id)
-      userResources.forEach(resource => {
+    createdUsers.forEach((user: any) => {
+      const userResources = createdResources.filter((r: any) => r.uploader_id === user.id)
+      userResources.forEach((resource: any) => {
         pointsEntries.push({
           user_id: user.id,
           delta: 5,
@@ -352,9 +352,9 @@ export async function seedDatabase() {
     })
 
     // Award points for net upvotes
-    createdVotes.forEach(vote => {
+    createdVotes.forEach((vote: any) => {
       if (vote.value === 1) {
-        const resource = createdResources.find(r => r.id === vote.resource_id)
+        const resource = createdResources.find((r: any) => r.id === vote.resource_id)
         if (resource) {
           pointsEntries.push({
             user_id: resource.uploader_id,

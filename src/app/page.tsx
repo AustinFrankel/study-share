@@ -101,7 +101,7 @@ export default function Home() {
       }
 
       // Transform the data to flatten tags
-      const transformedData = data?.map(resource => ({
+      const transformedData = data?.map((resource: any) => ({
         ...resource,
         tags: resource.tags?.map((rt: { tag: Record<string, unknown> }) => rt.tag) || []
       })) || []
@@ -240,7 +240,7 @@ export default function Home() {
           .eq('resource_id', resourceId)
         const paths = (fileRows || [])
           .map((f: { path?: string; storage_path?: string }) => f?.path || f?.storage_path)
-          .filter((path): path is string => Boolean(path))
+          .filter((path: string | undefined): path is string => Boolean(path))
         if (paths.length > 0) {
           await supabase.storage.from('resources').remove(paths)
         }

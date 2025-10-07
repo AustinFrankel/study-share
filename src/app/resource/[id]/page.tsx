@@ -165,8 +165,8 @@ export default function ResourcePage() {
         .select('value, voter_id')
         .eq('resource_id', resourceId)
 
-      const voteCount = voteData?.reduce((sum, vote) => sum + vote.value, 0) || 0
-      const userVote = user ? voteData?.find(v => v.voter_id === user.id)?.value : undefined
+      const voteCount = voteData?.reduce((sum: number, vote: { value: number }) => sum + vote.value, 0) || 0
+      const userVote = user ? voteData?.find((v: { voter_id: string; value: number }) => v.voter_id === user.id)?.value : undefined
 
       // Get user's rating if logged in
       let userRating = undefined
@@ -262,7 +262,7 @@ export default function ResourcePage() {
           table: 'comments',
           filter: `resource_id=eq.${resourceId}`
         },
-        (payload) => {
+        (payload: any) => {
           if (payload.eventType === 'INSERT') {
             // Fetch the new comment with author info
             supabase
@@ -270,7 +270,7 @@ export default function ResourcePage() {
               .select('*, author:users(*)')
               .eq('id', payload.new.id)
               .single()
-              .then(({ data }) => {
+              .then(({ data }: any) => {
                 if (data) {
                   setComments(prev => [...prev, data])
                 }
@@ -278,7 +278,7 @@ export default function ResourcePage() {
           } else if (payload.eventType === 'DELETE') {
             setComments(prev => prev.filter(c => c.id !== payload.old.id))
           } else if (payload.eventType === 'UPDATE') {
-            setComments(prev => prev.map(c => 
+            setComments(prev => prev.map(c =>
               c.id === payload.new.id ? { ...c, ...payload.new } : c
             ))
           }
@@ -635,7 +635,7 @@ export default function ResourcePage() {
           .eq('resource_id', resourceId)
         const paths = (fileRows || [])
           .map((f: { path?: string; storage_path?: string }) => f?.path || f?.storage_path)
-          .filter((path): path is string => Boolean(path))
+          .filter((path: string | undefined): path is string => Boolean(path))
         if (paths.length > 0) {
           await supabase.storage.from('resources').remove(paths)
         }

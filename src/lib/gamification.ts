@@ -130,7 +130,7 @@ export async function getUserStats(userId: string): Promise<UserStats> {
       if (votesError) {
         console.warn('Error fetching votes data:', votesError.message)
       } else {
-        netUpvotes = votesData?.reduce((sum, vote) => sum + vote.value, 0) || 0
+        netUpvotes = votesData?.reduce((sum: number, vote: any) => sum + vote.value, 0) || 0
       }
     } catch (error) {
       console.warn('Votes table might not exist yet:', error)

@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Upload, Lock, FileText, Image as ImageIcon, CheckCircle2, Loader2, Wand2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-import { processTestImages } from '@/lib/ocr'
+import { processTestImagesWithGemini } from '@/lib/gemini-ocr'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,20 +58,24 @@ function LiveUploadContent() {
 
     try {
       if (uploadType === 'image' && selectedFiles.length > 0) {
-        // Process images with OCR
+        // Process images with Google Gemini AI
         setProcessingOCR(true)
-        setOcrProgress('Processing images with OCR...')
-        
-        const ocrResult = await processTestImages(selectedFiles, testId || 'unknown')
-        
+        setOcrProgress('Starting AI-powered processing...')
+
+        const ocrResult = await processTestImagesWithGemini(
+          selectedFiles,
+          testId || 'unknown',
+          (progress) => setOcrProgress(progress)
+        )
+
         if (!ocrResult.success || !ocrResult.questions) {
           setProcessingOCR(false)
           throw new Error(ocrResult.error || 'Failed to extract questions from images')
         }
-        
-        setOcrProgress(`Extracted ${ocrResult.questions.length} questions. Saving to database...`)
-        
-        // Save questions to test_resources table
+
+        setOcrProgress(`Successfully extracted ${ocrResult.questions.length} questions! Saving to database...`)
+
+        // Save questions to test_resources table with upsert to make visible to everyone
         const { error: dbError } = await supabase
           .from('test_resources')
           .upsert({
@@ -79,23 +83,27 @@ function LiveUploadContent() {
             test_name: testName,
             questions: ocrResult.questions,
             uploader_id: user?.id || null,
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           }, {
-            onConflict: 'test_id'
+            onConflict: 'test_id',
+            ignoreDuplicates: false
           })
 
         if (dbError) {
           console.error('Database error:', dbError)
+          setProcessingOCR(false)
           throw new Error(`Database error: ${dbError.message || 'Failed to save to database'}`)
         }
-        
+
+        setOcrProgress('Test successfully uploaded and now visible to everyone!')
         setProcessingOCR(false)
         setSuccess(true)
-        
-        // Redirect after 2 seconds
+
+        // Redirect after 2.5 seconds
         setTimeout(() => {
           router.push(`/live/test?test=${testId}`)
-        }, 2000)
+        }, 2500)
       } else if (uploadType === 'text') {
         // Save text content directly (future enhancement: parse text to questions)
         const { error: dbError } = await supabase

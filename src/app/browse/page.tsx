@@ -101,7 +101,7 @@ function BrowseContent() {
 
       if (error) throw error
 
-      const transformedData = data?.map(resource => ({
+      const transformedData = data?.map((resource: Resource & { tags?: Array<{ tag: { name: string } }> }) => ({
         ...resource,
         tags: resource.tags?.map((rt: { tag: { name: string } }) => rt.tag) || []
       })) || []

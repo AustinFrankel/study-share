@@ -22,6 +22,7 @@ export default function Navigation() {
   const [authLoading, setAuthLoading] = useState(false)
   const [authMessage, setAuthMessage] = useState('')
   const [pendingRedirect, setPendingRedirect] = useState<string | null>(null)
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
 
   // Handle redirect after successful authentication
@@ -59,6 +60,7 @@ export default function Navigation() {
   }
 
   const handleSignOut = async () => {
+    setShowSignOutConfirm(false)
     await signOut()
   }
 
@@ -176,28 +178,48 @@ export default function Navigation() {
                 <div className="w-4 h-4 animate-spin border-2 border-gray-300 border-t-gray-900 rounded-full"></div>
               </Button>
             ) : user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-2 h-8 sm:h-9 px-2 sm:px-3">
-                    <Avatar className="w-6 h-6">
-                      {user.avatar_url && <AvatarImage src={user.avatar_url} alt={user.handle} />}
-                      <AvatarFallback className="text-[10px] bg-gray-100">
-                        {user.handle.split('-').map(w => w[0]).join('').toUpperCase().slice(0,2)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="hidden md:inline font-mono text-sm truncate max-w-[160px]">{user.handle}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile">Profile</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="flex items-center space-x-2 h-8 sm:h-9 px-2 sm:px-3">
+                      <Avatar className="w-6 h-6">
+                        {user.avatar_url && <AvatarImage src={user.avatar_url} alt={user.handle} />}
+                        <AvatarFallback className="text-[10px] bg-gray-100">
+                          {user.handle.split('-').map(w => w[0]).join('').toUpperCase().slice(0,2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="hidden md:inline font-mono text-sm truncate max-w-[160px]">{user.handle}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile">Profile</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowSignOutConfirm(true)}>
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Sign Out Confirmation Dialog */}
+                <Dialog open={showSignOutConfirm} onOpenChange={setShowSignOutConfirm}>
+                  <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                      <DialogTitle>Sign Out</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-gray-600">Are you sure you want to sign out?</p>
+                    <div className="flex gap-3 justify-end mt-4">
+                      <Button variant="outline" onClick={() => setShowSignOutConfirm(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleSignOut} className="bg-red-600 hover:bg-red-700">
+                        Sign Out
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </>
             ) : session ? (
               /* User has session but no user data yet - show loading state */
               <Button variant="ghost" disabled className="h-8 w-8 sm:h-9 sm:w-auto p-0 sm:px-4">

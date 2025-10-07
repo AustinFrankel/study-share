@@ -101,13 +101,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           sessionResult = await Promise.race([
             supabase.auth.getSession(),
-            new Promise<{ data: { session: null }; error: Error }>((_, reject) =>
-              setTimeout(() => reject(new Error('Session fetch timeout')), 10000)
+            new Promise<{ data: { session: null }; error: Error | null }>((resolve) =>
+              setTimeout(() => resolve({ data: { session: null }, error: null }), 10000)
             )
           ])
         } catch (timeoutError) {
           console.error('Session fetch timeout:', timeoutError)
-          sessionResult = { data: { session: null }, error: timeoutError }
+          sessionResult = { data: { session: null }, error: timeoutError as Error }
         }
         
         const { data: { session }, error } = sessionResult
@@ -154,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let subscription: { unsubscribe: () => void } | null = null
 
     if (isSupabaseConfigured) {
-      const authResult = supabase.auth.onAuthStateChange(async (event: string, newSession) => {
+      const authResult = supabase.auth.onAuthStateChange(async (event: string, newSession: any) => {
       if (!mounted) return
 
       console.log('Auth state change:', event, !!newSession)

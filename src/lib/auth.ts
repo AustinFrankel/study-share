@@ -83,7 +83,7 @@ export async function getCurrentUser(): Promise<User | null> {
     let authUser: { id: string; email?: string } | null = null
     let authError: unknown = null
     try {
-      const result = await withTimeout(
+      const result: any = await withTimeout(
         supabase.auth.getUser(),
         6000 // 6s for faster loading
       )

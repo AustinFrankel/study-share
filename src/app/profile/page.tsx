@@ -776,40 +776,41 @@ function ProfilePageContent() {
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <>
-                {/* User Info Card */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="w-12 h-12">
-                          {displayUser?.avatar_url && (
-                            <AvatarImage src={displayUser.avatar_url} alt={displayUser?.handle} />
-                          )}
-                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
-                            {displayUser?.handle.split('-').map((word: string) => word[0]).join('').toUpperCase().slice(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h2 className="text-xl font-mono font-semibold">{displayUser?.handle}</h2>
-                          <p className="text-sm text-gray-600">
-                            Member since {displayUser?.created_at ? new Date(displayUser.created_at).toLocaleDateString() : 'Unknown'}
-                          </p>
+                {/* User Info Card with Username Editor on the right */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-12 h-12">
+                            {displayUser?.avatar_url && (
+                              <AvatarImage src={displayUser.avatar_url} alt={displayUser?.handle} />
+                            )}
+                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
+                              {displayUser?.handle.split('-').map((word: string) => word[0]).join('').toUpperCase().slice(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <h2 className="text-xl font-mono font-semibold">{displayUser?.handle}</h2>
+                            <p className="text-sm text-gray-600">
+                              Member since {displayUser?.created_at ? new Date(displayUser.created_at).toLocaleDateString() : 'Unknown'}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      {isOwnProfile && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleRegenerateHandle}
-                          disabled={regeneratingHandle}
-                        >
-                          <Shuffle className="w-4 h-4 mr-2" />
-                          {regeneratingHandle ? 'Generating...' : 'New Handle'}
-                        </Button>
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                        {isOwnProfile && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRegenerateHandle}
+                            disabled={regeneratingHandle}
+                          >
+                            <Shuffle className="w-4 h-4 mr-2" />
+                            {regeneratingHandle ? 'Generating...' : 'New Handle'}
+                          </Button>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
                     {isOwnProfile && (
                       <div className="mb-4">
                         <div className="flex items-center gap-2">
@@ -904,17 +905,18 @@ function ProfilePageContent() {
                         </div>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
 
-                {/* Username Editor - Only show for own profile */}
-                {isOwnProfile && displayUser && (
-                  <UsernameEditor
-                    userId={displayUser.id}
-                    currentHandle={displayUser.handle}
-                    onHandleUpdated={refreshUser}
-                  />
-                )}
+                  {/* Username Editor - Only show for own profile */}
+                  {isOwnProfile && displayUser && (
+                    <UsernameEditor
+                      userId={displayUser.id}
+                      currentHandle={displayUser.handle}
+                      onHandleUpdated={refreshUser}
+                    />
+                  )}
+                </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

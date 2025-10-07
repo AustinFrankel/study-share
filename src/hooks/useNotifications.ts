@@ -48,7 +48,7 @@ export function useNotifications() {
 
       const notificationList = data || []
       setNotifications(notificationList)
-      setUnreadCount(notificationList.filter(n => !n.read).length)
+      setUnreadCount(notificationList.filter((n: any) => !n.read).length)
     } catch (error) {
       logError('Error fetching notifications', error)
     } finally {

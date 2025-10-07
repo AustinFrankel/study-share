@@ -178,7 +178,7 @@ export async function getUserViewedResources(userId: string): Promise<string[]> 
 
     if (error) throw error
 
-    return data?.map(row => row.resource_id).filter(Boolean) || []
+    return data?.map((row: any) => row.resource_id).filter(Boolean) || []
   } catch (error) {
     console.error('Error getting viewed resources:', error)
     return []
