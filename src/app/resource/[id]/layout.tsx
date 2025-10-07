@@ -123,6 +123,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default function ResourceLayout({ children }: Props) {
+export default async function ResourceLayout({ children, params }: Props) {
+  await params
   return <>{children}</>
 }
