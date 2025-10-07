@@ -82,7 +82,13 @@ export default function Navigation() {
           {/* Logo - Always show full name */}
           <div className="flex items-center flex-shrink-0">
             <Link href="/" className="flex items-center space-x-2 group" aria-label="StudyShare Home">
-              <Home className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 transition-transform duration-200 group-hover:scale-110" aria-hidden="true" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 p-1.5 sm:p-2 shadow-md transition-all duration-200 group-hover:scale-110 group-hover:shadow-lg flex items-center justify-center" aria-hidden="true">
+                <svg viewBox="0 0 100 100" fill="white" className="w-full h-full">
+                  <path d="M50 10 L80 30 L80 45 Q80 60 70 70 Q60 80 50 80 Q40 80 30 70 Q20 60 20 45 L20 30 Z"/>
+                  <path d="M50 80 L50 95 M45 90 Q50 92 55 90"/>
+                  <rect x="40" y="25" width="20" height="25" rx="2"/>
+                </svg>
+              </div>
               <span className="font-bold text-lg sm:text-xl transition-colors duration-200 group-hover:text-indigo-600">Study Share</span>
             </Link>
           </div>
@@ -193,7 +199,16 @@ export default function Navigation() {
                 <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
                   <DialogContent className="max-w-md mx-auto w-[calc(100%-2rem)] sm:w-full max-h-[90vh] overflow-y-auto my-auto">
                     <DialogHeader>
-                      <DialogTitle className="text-xl sm:text-2xl text-center">Sign in to Study Share</DialogTitle>
+                      <div className="flex flex-col items-center gap-3 mb-2">
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 p-3 shadow-lg flex items-center justify-center">
+                          <svg viewBox="0 0 100 100" fill="white" className="w-full h-full">
+                            <path d="M50 10 L80 30 L80 45 Q80 60 70 70 Q60 80 50 80 Q40 80 30 70 Q20 60 20 45 L20 30 Z"/>
+                            <path d="M50 80 L50 95 M45 90 Q50 92 55 90"/>
+                            <rect x="40" y="25" width="20" height="25" rx="2"/>
+                          </svg>
+                        </div>
+                        <DialogTitle className="text-xl sm:text-2xl text-center">Sign in to Study Share</DialogTitle>
+                      </div>
                     </DialogHeader>
                     <form onSubmit={handleSignIn} className="space-y-4 pt-2">
                       <div>
