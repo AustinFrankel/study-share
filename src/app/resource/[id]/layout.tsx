@@ -2,12 +2,12 @@ import { Metadata } from 'next'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 
 type Props = {
-  params: { id: string }
+  params: Promise<{ id: string }>
   children: React.ReactNode
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = params
+  const { id } = await params
 
   // Return default metadata if Supabase is not configured
   if (!isSupabaseConfigured) {

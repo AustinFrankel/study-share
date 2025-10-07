@@ -89,7 +89,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Fetch all public resources (limit to 50,000 for sitemap best practices)
     const { data: resources, error } = await supabase
       .from('resources')
-      .select('id, created_at, updated_at')
+      .select('id, created_at')
       .order('created_at', { ascending: false })
       .limit(50000)
 
@@ -98,9 +98,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       return staticPages
     }
 
-    const resourcePages: MetadataRoute.Sitemap = (resources || []).map((resource) => ({
+    const resourcePages: MetadataRoute.Sitemap = (resources || []).map((resource: { id: string; created_at: string }) => ({
       url: `${baseUrl}/resource/${resource.id}`,
-      lastModified: new Date(resource.updated_at || resource.created_at),
+      lastModified: new Date(resource.created_at),
       changeFrequency: 'weekly' as const,
       priority: 0.8,
     }))
