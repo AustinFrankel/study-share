@@ -83,10 +83,8 @@ export default function Navigation() {
           <div className="flex items-center flex-shrink-0">
             <Link href="/" className="flex items-center space-x-2 group" aria-label="StudyShare Home">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 p-1.5 sm:p-2 shadow-md transition-all duration-200 group-hover:scale-110 group-hover:shadow-lg flex items-center justify-center" aria-hidden="true">
-                <svg viewBox="0 0 100 100" fill="white" className="w-full h-full">
-                  <path d="M50 10 L80 30 L80 45 Q80 60 70 70 Q60 80 50 80 Q40 80 30 70 Q20 60 20 45 L20 30 Z"/>
-                  <path d="M50 80 L50 95 M45 90 Q50 92 55 90"/>
-                  <rect x="40" y="25" width="20" height="25" rx="2"/>
+                <svg viewBox="0 0 24 24" fill="white" className="w-full h-full">
+                  <path d="M12 3L1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
                 </svg>
               </div>
               <span className="font-bold text-lg sm:text-xl transition-colors duration-200 group-hover:text-indigo-600">Study Share</span>
@@ -201,10 +199,8 @@ export default function Navigation() {
                     <DialogHeader>
                       <div className="flex flex-col items-center gap-3 mb-2">
                         <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 p-3 shadow-lg flex items-center justify-center">
-                          <svg viewBox="0 0 100 100" fill="white" className="w-full h-full">
-                            <path d="M50 10 L80 30 L80 45 Q80 60 70 70 Q60 80 50 80 Q40 80 30 70 Q20 60 20 45 L20 30 Z"/>
-                            <path d="M50 80 L50 95 M45 90 Q50 92 55 90"/>
-                            <rect x="40" y="25" width="20" height="25" rx="2"/>
+                          <svg viewBox="0 0 24 24" fill="white" className="w-full h-full">
+                            <path d="M12 3L1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
                           </svg>
                         </div>
                         <DialogTitle className="text-xl sm:text-2xl text-center">Sign in to Study Share</DialogTitle>
