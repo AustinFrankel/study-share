@@ -56,12 +56,18 @@ CREATE INDEX IF NOT EXISTS idx_test_resources_created_at ON public.test_resource
 -- Enable RLS
 ALTER TABLE public.test_resources ENABLE ROW LEVEL SECURITY;
 
--- Drop old policies
-DROP POLICY IF EXISTS "Anyone can view test resources" ON public.test_resources;
-DROP POLICY IF EXISTS "Authenticated users can insert test resources" ON public.test_resources;
-DROP POLICY IF EXISTS "Anyone can insert test resources" ON public.test_resources;
-DROP POLICY IF EXISTS "Anyone can update test resources" ON public.test_resources;
-DROP POLICY IF EXISTS "Users can update own resources" ON public.test_resources;
+-- Drop old policies if they exist
+DO $$ 
+BEGIN
+  DROP POLICY IF EXISTS "Public read access" ON public.test_resources;
+  DROP POLICY IF EXISTS "Public insert access" ON public.test_resources;
+  DROP POLICY IF EXISTS "Public update access" ON public.test_resources;
+  DROP POLICY IF EXISTS "Anyone can view test resources" ON public.test_resources;
+  DROP POLICY IF EXISTS "Authenticated users can insert test resources" ON public.test_resources;
+  DROP POLICY IF EXISTS "Anyone can insert test resources" ON public.test_resources;
+  DROP POLICY IF EXISTS "Anyone can update test resources" ON public.test_resources;
+  DROP POLICY IF EXISTS "Users can update own resources" ON public.test_resources;
+END $$;
 
 -- Create new open policies
 CREATE POLICY "Public read access"
@@ -93,8 +99,13 @@ CREATE INDEX IF NOT EXISTS idx_test_waitlist_email ON public.test_waitlist(email
 
 ALTER TABLE public.test_waitlist ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Anyone can join waitlist" ON public.test_waitlist;
-DROP POLICY IF EXISTS "Public can view waitlist" ON public.test_waitlist;
+-- Drop old policies if they exist
+DO $$ 
+BEGIN
+  DROP POLICY IF EXISTS "Anyone can join waitlist" ON public.test_waitlist;
+  DROP POLICY IF EXISTS "Public can view waitlist" ON public.test_waitlist;
+  DROP POLICY IF EXISTS "Public can join waitlist" ON public.test_waitlist;
+END $$;
 
 CREATE POLICY "Public can join waitlist"
   ON public.test_waitlist FOR INSERT
@@ -143,10 +154,15 @@ CREATE INDEX IF NOT EXISTS idx_resources_public ON public.resources(public);
 ALTER TABLE public.resources ENABLE ROW LEVEL SECURITY;
 
 -- Drop old policies
-DROP POLICY IF EXISTS "Anyone can view public resources" ON public.resources;
-DROP POLICY IF EXISTS "Resources are viewable by everyone" ON public.resources;
-DROP POLICY IF EXISTS "Authenticated users can create resources" ON public.resources;
-DROP POLICY IF EXISTS "Users can update own resources" ON public.resources;
+DO $$ 
+BEGIN
+  DROP POLICY IF EXISTS "Anyone can view public resources" ON public.resources;
+  DROP POLICY IF EXISTS "Resources are viewable by everyone" ON public.resources;
+  DROP POLICY IF EXISTS "Authenticated users can create resources" ON public.resources;
+  DROP POLICY IF EXISTS "Users can update own resources" ON public.resources;
+  DROP POLICY IF EXISTS "Public can view all resources" ON public.resources;
+  DROP POLICY IF EXISTS "Authenticated users can insert resources" ON public.resources;
+END $$;
 
 -- Create new policies
 CREATE POLICY "Public can view all resources"
@@ -176,8 +192,13 @@ CREATE INDEX IF NOT EXISTS idx_files_resource ON public.files(resource_id);
 
 ALTER TABLE public.files ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Public can view files" ON public.files;
-DROP POLICY IF EXISTS "Authenticated users can insert files" ON public.files;
+-- Drop old policies
+DO $$ 
+BEGIN
+  DROP POLICY IF EXISTS "Public can view files" ON public.files;
+  DROP POLICY IF EXISTS "Authenticated users can insert files" ON public.files;
+  DROP POLICY IF EXISTS "Files are viewable by everyone" ON public.files;
+END $$;
 
 CREATE POLICY "Public can view files"
   ON public.files FOR SELECT
@@ -206,8 +227,13 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Public can view users" ON public.users;
-DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
+-- Drop old policies
+DO $$ 
+BEGIN
+  DROP POLICY IF EXISTS "Public can view users" ON public.users;
+  DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
+  DROP POLICY IF EXISTS "Users can insert own profile" ON public.users;
+END $$;
 
 CREATE POLICY "Public can view users"
   ON public.users FOR SELECT
