@@ -165,9 +165,6 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
           setTitle(cleanedName)
         }
         
-        // Start upload immediately when files are added from global dropzone
-        startImmediateUpload(uploadFiles)
-        
         // Clear pending files after processing
         clearPendingFiles()
         
@@ -591,12 +588,16 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
       setTitle(cleanedName)
     }
     
-    // Start upload immediately when files are selected
-    startImmediateUpload(uploadFiles)
+    // Do NOT start upload immediately - files will be uploaded on final submit
+    // Just advance to step 2 so user can add resource details
+    if (currentStep === 1) {
+      setCurrentStep(2)
+      setError('')
+    }
     
     // Reset the input value to allow selecting the same file again if needed
     event.target.value = ''
-  }, [files, title])
+  }, [files, title, currentStep])
 
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault()
@@ -654,14 +655,16 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
       setTitle(cleanedName)
     }
     
-    // Start upload immediately
-    startImmediateUpload([uploadFile])
-    
     // Reset text upload state
     setTextContent('')
     setTextFileName('')
     setShowTextUpload(false)
     setError('')
+    
+    // Advance to step 2
+    if (currentStep === 1) {
+      setCurrentStep(2)
+    }
   }
   
   // Start immediate upload when files are added

@@ -20,10 +20,11 @@ export function generateRandomHandle(): string {
 }
 
 export async function signInWithEmail(email: string) {
+  const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${window.location.origin}/auth/callback`
+      emailRedirectTo: `${redirectUrl}/auth/callback`
     }
   })
   return { error }
@@ -31,10 +32,11 @@ export async function signInWithEmail(email: string) {
 
 // Sign in with Google OAuth
 export async function signInWithGoogle() {
+  const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`
+      redirectTo: `${redirectUrl}/auth/callback`
     }
   })
   return { data, error }

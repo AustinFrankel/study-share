@@ -66,6 +66,8 @@ export async function GET(request: Request) {
     }
   }
 
-  // Redirect to home page after successful auth
-  return NextResponse.redirect(requestUrl.origin)
+  // Redirect to home page after successful auth  
+  // URL should be the production URL or localhost, not localhost:3000 hardcoded
+  const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || requestUrl.origin
+  return NextResponse.redirect(redirectUrl)
 }
