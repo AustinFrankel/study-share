@@ -6,27 +6,24 @@ import Navigation from '@/components/Navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, School, Users, Trash2, CheckCircle, AlertCircle } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface School {
   id: string
   name: string
-  type: string
-  location: string
+  city: string | null
+  state: string | null
 }
 
 interface Teacher {
   id: string
   name: string
   school_id: string
-  department: string
 }
 
 export default function DirectoryManagement() {
-  const { user } = useAuth()
   const [schools, setSchools] = useState<School[]>([])
   const [teachers, setTeachers] = useState<Teacher[]>([])
   const [loading, setLoading] = useState(true)
@@ -35,13 +32,13 @@ export default function DirectoryManagement() {
   // Add School Form State
   const [newSchool, setNewSchool] = useState({
     name: '',
-    type: 'university',
-    location: ''
+    city: '',
+    state: ''
   })
 
   // Add Teacher Form State
-  const [newTeachers, setNewTeachers] = useState<Array<{ name: string, department: string }>>([
-    { name: '', department: '' }
+  const [newTeachers, setNewTeachers] = useState<Array<{ name: string }>>([
+    { name: '' }
   ])
   const [selectedSchoolForTeachers, setSelectedSchoolForTeachers] = useState<string>('')
 
@@ -82,8 +79,8 @@ export default function DirectoryManagement() {
         .from('schools')
         .insert([{
           name: newSchool.name.trim(),
-          type: newSchool.type,
-          location: newSchool.location.trim()
+          city: newSchool.city.trim() || null,
+          state: newSchool.state.trim() || null
         }])
         .select()
         .single()
@@ -92,7 +89,7 @@ export default function DirectoryManagement() {
 
       setSchools([...schools, data])
       setSelectedSchoolForTeachers(data.id)
-      setNewSchool({ name: '', type: 'university', location: '' })
+      setNewSchool({ name: '', city: '', state: '' })
 
       showMessage('success', `School "${data.name}" added! Now add teachers below.`)
 
@@ -122,8 +119,7 @@ export default function DirectoryManagement() {
     try {
       const teachersToInsert = validTeachers.map(t => ({
         name: t.name.trim(),
-        school_id: selectedSchoolForTeachers,
-        department: t.department.trim() || 'General'
+        school_id: selectedSchoolForTeachers
       }))
 
       const { data, error } = await supabase
@@ -134,7 +130,7 @@ export default function DirectoryManagement() {
       if (error) throw error
 
       setTeachers([...teachers, ...data])
-      setNewTeachers([{ name: '', department: '' }])
+      setNewTeachers([{ name: '' }])
 
       const schoolName = schools.find(s => s.id === selectedSchoolForTeachers)?.name
       showMessage('success', `Added ${data.length} teacher(s) to ${schoolName}!`)
@@ -180,16 +176,16 @@ export default function DirectoryManagement() {
   }
 
   const addTeacherRow = () => {
-    setNewTeachers([...newTeachers, { name: '', department: '' }])
+    setNewTeachers([...newTeachers, { name: '' }])
   }
 
   const removeTeacherRow = (index: number) => {
     setNewTeachers(newTeachers.filter((_, i) => i !== index))
   }
 
-  const updateTeacherRow = (index: number, field: 'name' | 'department', value: string) => {
+  const updateTeacherRow = (index: number, value: string) => {
     const updated = [...newTeachers]
-    updated[index][field] = value
+    updated[index].name = value
     setNewTeachers(updated)
   }
 
@@ -246,26 +242,23 @@ export default function DirectoryManagement() {
               </div>
 
               <div>
-                <Label htmlFor="school-type">Type</Label>
-                <Select value={newSchool.type} onValueChange={(value) => setNewSchool({ ...newSchool, type: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="high_school">High School</SelectItem>
-                    <SelectItem value="university">University</SelectItem>
-                    <SelectItem value="college">College</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="school-city">City</Label>
+                <Input
+                  id="school-city"
+                  placeholder="e.g., Rye Brook"
+                  value={newSchool.city}
+                  onChange={(e) => setNewSchool({ ...newSchool, city: e.target.value })}
+                />
               </div>
 
               <div>
-                <Label htmlFor="school-location">Location</Label>
+                <Label htmlFor="school-state">State</Label>
                 <Input
-                  id="school-location"
-                  placeholder="e.g., Rye Brook, NY"
-                  value={newSchool.location}
-                  onChange={(e) => setNewSchool({ ...newSchool, location: e.target.value })}
+                  id="school-state"
+                  placeholder="e.g., NY"
+                  maxLength={2}
+                  value={newSchool.state}
+                  onChange={(e) => setNewSchool({ ...newSchool, state: e.target.value.toUpperCase() })}
                 />
               </div>
 
@@ -302,21 +295,14 @@ export default function DirectoryManagement() {
                 </Select>
               </div>
 
-              <div className="space-y-3 max-h-64 overflow-y-auto">
+              <div className="space-y-3 max-h-96 overflow-y-auto">
                 {newTeachers.map((teacher, index) => (
                   <div key={index} className="flex gap-2">
                     <div className="flex-1">
                       <Input
                         placeholder="Teacher name (e.g., Prof. John Smith)"
                         value={teacher.name}
-                        onChange={(e) => updateTeacherRow(index, 'name', e.target.value)}
-                      />
-                    </div>
-                    <div className="w-32">
-                      <Input
-                        placeholder="Department"
-                        value={teacher.department}
-                        onChange={(e) => updateTeacherRow(index, 'department', e.target.value)}
+                        onChange={(e) => updateTeacherRow(index, e.target.value)}
                       />
                     </div>
                     {newTeachers.length > 1 && (
@@ -356,14 +342,13 @@ export default function DirectoryManagement() {
             <div className="space-y-2">
               {schools.map((school) => {
                 const schoolTeachers = teachers.filter(t => t.school_id === school.id)
+                const location = [school.city, school.state].filter(Boolean).join(', ')
                 return (
                   <div key={school.id} className="p-4 border rounded-lg hover:bg-gray-50">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900">{school.name}</h3>
-                        <p className="text-sm text-gray-600">
-                          {school.location} • {school.type.replace('_', ' ')}
-                        </p>
+                        {location && <p className="text-sm text-gray-600">{location}</p>}
                         <p className="text-sm text-gray-500 mt-1">
                           {schoolTeachers.length} teacher{schoolTeachers.length !== 1 ? 's' : ''}
                         </p>
@@ -380,18 +365,15 @@ export default function DirectoryManagement() {
 
                     {schoolTeachers.length > 0 && (
                       <div className="mt-3 pl-4 border-l-2 border-gray-200">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                           {schoolTeachers.map((teacher) => (
-                            <div key={teacher.id} className="flex items-center justify-between text-sm bg-white p-2 rounded">
-                              <span className="text-gray-700">
-                                {teacher.name}
-                                {teacher.department && <span className="text-gray-500"> • {teacher.department}</span>}
-                              </span>
+                            <div key={teacher.id} className="flex items-center justify-between text-sm bg-white p-2 rounded border">
+                              <span className="text-gray-700 truncate">{teacher.name}</span>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleDeleteTeacher(teacher.id, teacher.name)}
-                                className="text-red-600 hover:text-red-700 h-6 w-6 p-0"
+                                className="text-red-600 hover:text-red-700 h-6 w-6 p-0 flex-shrink-0 ml-2"
                               >
                                 <Trash2 className="w-3 h-3" />
                               </Button>
