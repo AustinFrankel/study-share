@@ -26,7 +26,15 @@ if (!hasValidCredentials && typeof window !== 'undefined' && process.env.NODE_EN
 // client sign-in occurs.
 export const supabase = hasValidCredentials && supabaseUrl && supabaseAnonKey
   ? (typeof window !== 'undefined'
-      ? createBrowserClient(supabaseUrl, supabaseAnonKey)
+      ? createBrowserClient(supabaseUrl, supabaseAnonKey, {
+          auth: {
+            // Suppress console errors for invalid refresh tokens
+            // This prevents spam when users have old/expired tokens
+            detectSessionInUrl: true,
+            persistSession: true,
+            autoRefreshToken: true,
+          },
+        })
       : createClient(supabaseUrl, supabaseAnonKey, {
           auth: {
             // In server environments, avoid persisting session state

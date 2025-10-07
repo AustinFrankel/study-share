@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Head from 'next/head'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { logActivity } from '@/lib/activity'
 import { Resource } from '@/lib/types'
@@ -16,6 +17,8 @@ import { Button } from '@/components/ui/button'
 import { TrendingUp, BookOpen, Users, Star } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
+
+// Note: Metadata is inherited from layout.tsx, but we enhance it here for the homepage
 
 export default function Home() {
   const { user } = useAuth()
@@ -60,6 +63,7 @@ export default function Home() {
 
   const fetchResources = async () => {
     try {
+      console.log('Fetching resources from homepage...')
       // Only select necessary columns to reduce data transfer
       const { data, error } = await supabase
         .from('resources')
@@ -106,6 +110,7 @@ export default function Home() {
         tags: resource.tags?.map((rt: { tag: Record<string, unknown> }) => rt.tag) || []
       })) || []
 
+      console.log(`Homepage fetched ${transformedData.length} resources`)
       setResources(transformedData)
     } catch (error) {
       console.error('Error fetching resources:', error)
@@ -310,8 +315,8 @@ export default function Home() {
             Study Resources for Your Classes
           </h1>
           <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-5 max-w-2xl mx-auto px-4 leading-relaxed">
-            Find and share study materials specific to your school, teacher, and class. 
-            Get AI-powered practice questions from uploaded materials.
+            Find and share study guides, class notes, and past exams specific to your school, teacher, and class.
+            Access AI-powered practice questions instantly.
           </p>
           
           {/* Search Bar - Improved Mobile Styling */}

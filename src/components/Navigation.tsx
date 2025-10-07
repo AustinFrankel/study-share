@@ -76,126 +76,80 @@ export default function Navigation() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-indigo-100 bg-white backdrop-blur supports-[backdrop-filter]:bg-white/95 shadow-sm">
+    <nav className="sticky top-0 z-50 border-b border-indigo-100 bg-white backdrop-blur supports-[backdrop-filter]:bg-white/95 shadow-sm" role="navigation" aria-label="Main navigation">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 sm:h-18">
           {/* Logo - Always show full name */}
           <div className="flex items-center flex-shrink-0">
-            <Link href="/" className="flex items-center space-x-2">
-              <Home className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
-              <span className="font-bold text-lg sm:text-xl">Study Share</span>
+            <Link href="/" className="flex items-center space-x-2 group" aria-label="StudyShare Home">
+              <Home className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 transition-transform duration-200 group-hover:scale-110" aria-hidden="true" />
+              <span className="font-bold text-lg sm:text-xl transition-colors duration-200 group-hover:text-indigo-600">Study Share</span>
             </Link>
           </div>
 
           {/* Navigation Buttons - Better spacing */}
           <div className="flex items-center gap-1.5 sm:gap-2 md:gap-2.5">
-            {/* Upload button - Icon only on mobile */}
-            <Button asChild className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 sm:h-10 px-3 sm:px-5 text-sm font-medium">
-              <Link href="/upload">
-                <Upload className="w-4 h-4 sm:mr-2" />
+            {/* Upload button - Icon only on mobile with tooltip */}
+            <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 sm:h-10 px-3 sm:px-5 text-sm font-medium transition-all duration-200 hover:scale-105" title="Upload study materials">
+              <Link href="/upload" aria-label="Upload study materials">
+                <Upload className="w-4 h-4 sm:mr-2" aria-hidden="true" />
                 <span className="hidden sm:inline">Upload</span>
+                <span className="sr-only sm:hidden">Upload study materials</span>
               </Link>
             </Button>
 
-            {/* Browse button - distinct color */}
-            <Button asChild variant="outline" className="border-gray-300 hover:bg-gray-50 h-9 sm:h-10 px-3 sm:px-5 text-sm font-medium">
-              <Link href="/browse">Browse</Link>
+            {/* Browse button - subtle text hover effect with scale */}
+            <Button asChild variant="ghost" className="h-9 sm:h-10 px-3 sm:px-5 text-sm font-medium hover:bg-transparent hover:text-indigo-600 transition-all duration-200 hover:scale-110">
+              <Link href="/browse" aria-label="Browse all study resources">Browse</Link>
             </Button>
 
-            {/* Live button */}
-            <Button asChild variant="outline" className="border-indigo-200 hover:bg-indigo-50 h-9 sm:h-10 px-3 sm:px-5 text-sm font-medium">
-              <Link href="/live">
+            {/* Live button - subtle text hover effect with scale */}
+            <Button asChild variant="ghost" className="h-9 sm:h-10 px-3 sm:px-5 text-sm font-medium hover:bg-transparent hover:text-indigo-600 transition-all duration-200 hover:scale-110">
+              <Link href="/live" aria-label="View live study sessions">
                 Live
               </Link>
             </Button>
 
-            {/* Notification Dropdown - Only show for authenticated users */}
-            {user && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="relative h-9 w-9 sm:h-10 sm:w-10 p-0">
-                    <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
-                  <div className="p-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-sm">Notifications</h3>
-                      {unreadCount > 0 && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={markAllAsRead}
-                          className="text-xs h-auto p-1"
-                        >
-                          Mark all read
-                        </Button>
-                      )}
-                    </div>
-                    {notifications.length === 0 ? (
-                      <div className="text-center text-gray-500 text-sm py-4">
-                        No notifications yet
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        {notifications.map((notification) => (
-                          <div
-                            key={notification.id}
-                            className={`p-2 rounded text-sm cursor-pointer hover:bg-gray-50 ${
-                              !notification.read ? 'bg-blue-50 border-l-2 border-blue-500' : ''
-                            }`}
-                            onClick={() => {
-                              if (!notification.read) {
-                                markAsRead(notification.id)
-                              }
-                              if (notification.resource_id) {
-                                router.push(`/resource/${notification.resource_id}`)
-                              }
-                            }}
-                          >
-                            <div className="font-medium">{notification.title}</div>
-                            <div className="text-gray-600 mt-1">{notification.message}</div>
-                            <div className="text-xs text-gray-400 mt-1">
-                              {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-
-            {/* Profile Section - Icon only on mobile, handle on desktop */}
+            {/* Profile Section - Just avatar button, visually appealing */}
             {loading ? (
-              <Button variant="ghost" disabled className="h-9 w-9 sm:h-10 sm:w-auto p-0 sm:px-4">
+              <Button variant="ghost" disabled className="h-10 w-10 rounded-full p-0" aria-label="Loading user profile">
                 <div className="w-4 h-4 animate-spin border-2 border-gray-300 border-t-gray-900 rounded-full"></div>
               </Button>
             ) : user ? (
               <>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="flex items-center space-x-2 h-9 sm:h-10 px-2 sm:px-3">
-                      <Avatar className="w-6 h-6">
-                        {user.avatar_url && <AvatarImage src={user.avatar_url} alt={user.handle} />}
-                        <AvatarFallback className="text-[10px] bg-gray-100">
+                    <Button variant="ghost" className="h-10 w-10 rounded-full p-0 hover:bg-transparent ring-2 ring-transparent hover:ring-indigo-200 transition-all duration-200 hover:scale-110" aria-label="Open user menu">
+                      <Avatar className="w-10 h-10 border-2 border-white shadow-md">
+                        {user.avatar_url && <AvatarImage src={user.avatar_url} alt={`${user.handle} profile picture`} />}
+                        <AvatarFallback className="text-sm bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold">
                           {user.handle.split('-').map(w => w[0]).join('').toUpperCase().slice(0,2)}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="hidden md:inline font-mono text-sm truncate max-w-[160px]">{user.handle}</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem asChild>
-                      <Link href="/profile">Profile</Link>
+                  <DropdownMenuContent align="end" className="w-64 animate-in fade-in-0 zoom-in-95 duration-200">
+                    <div className="px-3 py-2 border-b">
+                      <p className="text-sm font-medium">{user.handle}</p>
+                    </div>
+                    <DropdownMenuItem asChild className="cursor-pointer transition-colors duration-200 hover:bg-indigo-50 hover:text-indigo-600">
+                      <Link href="/profile">
+                        <User className="w-4 h-4 mr-2" />
+                        Profile
+                      </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowSignOutConfirm(true)}>
+                    <DropdownMenuItem asChild className="cursor-pointer transition-colors duration-200 hover:bg-indigo-50 hover:text-indigo-600">
+                      <Link href="/profile">
+                        <Bell className="w-4 h-4 mr-2" />
+                        Notifications
+                        {unreadCount > 0 && (
+                          <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                          </span>
+                        )}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowSignOutConfirm(true)} className="cursor-pointer transition-colors duration-200 hover:bg-red-50 hover:text-red-600">
                       <LogOut className="w-4 h-4 mr-2" />
                       Sign out
                     </DropdownMenuItem>
@@ -227,11 +181,14 @@ export default function Navigation() {
                 <div className="hidden sm:block w-3 h-3 animate-spin border-2 border-gray-300 border-t-gray-900 rounded-full"></div>
               </Button>
             ) : (
-              /* No session - show profile button that triggers auth */
+              /* No session - show circular profile button that triggers auth */
               <>
-                <Button onClick={handleProfileClick} className="h-9 sm:h-10 px-3 sm:px-5 text-sm font-medium bg-gray-900 hover:bg-gray-800 text-white">
-                  <User className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Profile</span>
+                <Button onClick={handleProfileClick} variant="ghost" className="h-10 w-10 rounded-full p-0 hover:bg-transparent ring-2 ring-transparent hover:ring-indigo-200 transition-all duration-200 hover:scale-110" aria-label="Sign in to view profile">
+                  <Avatar className="w-10 h-10 border-2 border-gray-300 shadow-md">
+                    <AvatarFallback className="text-sm bg-gradient-to-br from-gray-400 to-gray-500 text-white">
+                      <User className="w-5 h-5" aria-hidden="true" />
+                    </AvatarFallback>
+                  </Avatar>
                 </Button>
                 <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
                   <DialogContent className="max-w-md mx-auto w-[calc(100%-2rem)] sm:w-full max-h-[90vh] overflow-y-auto my-auto">

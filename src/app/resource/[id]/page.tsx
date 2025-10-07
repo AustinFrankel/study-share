@@ -14,6 +14,7 @@ import VoteButton from '@/components/VoteButton'
 import FlagButton from '@/components/FlagButton'
 import StarRating from '@/components/StarRating'
 import AccessGate from '@/components/AccessGate'
+import Breadcrumbs from '@/components/Breadcrumbs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -24,6 +25,7 @@ import { Progress } from '@/components/ui/progress'
 import { ArrowLeft, Download, FileText, Image, AlertTriangle, Eye, EyeOff, MessageCircle, Trash2, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
+import NextImage from 'next/image'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export default function ResourcePage() {
@@ -747,6 +749,17 @@ export default function ResourcePage() {
       <Navigation />
       
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-8">
+        {/* Breadcrumbs for SEO and Navigation */}
+        <Breadcrumbs
+          items={[
+            { label: 'Browse', href: '/browse' },
+            ...(resource.class?.school?.name ? [{ label: resource.class.school.name }] : []),
+            ...(resource.class?.subject?.name ? [{ label: resource.class.subject.name }] : []),
+            { label: resource.title }
+          ]}
+          className="mb-4"
+        />
+
         {/* Back Button */}
         <div className="mb-4">
           <Button variant="ghost" asChild>
@@ -959,10 +972,13 @@ export default function ResourcePage() {
                     <div className="mb-4">
                       <div className="relative">
                         <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                          <img
+                          <NextImage
                             src={`/api/file/${currentFile.id}`}
-                            alt={currentFile.original_filename}
-                            className="w-full h-full object-contain"
+                            alt={`${resource?.title || 'Study resource'} - ${currentFile.original_filename}`}
+                            fill
+                            className="object-contain"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+                            loading="lazy"
                             onError={(e) => {
                               (e.target as HTMLImageElement).style.display = 'none';
                               (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');

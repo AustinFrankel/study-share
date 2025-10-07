@@ -79,18 +79,39 @@ const TestViewPageContent = () => {
       if (!testId) return
 
       setLoadingResources(true)
-      const { data } = await supabase
-        .from('test_resources')
-        .select('questions')
-        .eq('test_id', testId)
-        .single()
+      try {
+        const { data, error } = await supabase
+          .from('test_resources')
+          .select('questions')
+          .eq('test_id', testId)
+          .single()
 
-      if (data?.questions) {
-        setQuestions(data.questions as Question[])
-        setHasResources(true)
-        setLoadingResources(false)
-      } else {
-        // No resources available - test is locked
+        // Silently handle 404 errors if table doesn't exist
+        if (error) {
+          const errorCode = (error as any)?.code
+          const is404 = errorCode === 'PGRST116' || errorCode === '42P01' ||
+                       error.message?.includes('does not exist') ||
+                       error.message === 'Not Found'
+
+          // Silently ignore all errors (table doesn't exist yet or no data)
+          // No resources available
+          setHasResources(false)
+          setLoadingResources(false)
+          return
+        }
+
+        if (data?.questions) {
+          setQuestions(data.questions as Question[])
+          setHasResources(true)
+          setLoadingResources(false)
+        } else {
+          // No resources available - test is locked
+          setHasResources(false)
+          setLoadingResources(false)
+        }
+      } catch (err) {
+        // Silently handle errors
+        console.log('Unable to load test resources')
         setHasResources(false)
         setLoadingResources(false)
       }

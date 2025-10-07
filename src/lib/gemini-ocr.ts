@@ -2,7 +2,7 @@
 // Uses Google's Generative AI to extract and structure test questions from images
 
 const GEMINI_API_KEY = 'AIzaSyD4icVauYHyo7e0Tdtd5TqBjDrQHWKRgM4'
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent'
 
 export interface Question {
   id: string

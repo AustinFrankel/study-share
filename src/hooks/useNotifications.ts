@@ -44,13 +44,38 @@ export function useNotifications() {
         .order('created_at', { ascending: false })
         .limit(20)
 
-      if (error) throw error
+      if (error) {
+        // If table doesn't exist or returns 404, silently fail
+        const errorCode = (error as any)?.code
+        const errorMessage = (error as any)?.message || ''
+        const isNotFound = errorCode === 'PGRST116' || errorCode === '42P01' ||
+                          errorMessage.includes('does not exist') ||
+                          errorMessage.includes('schema cache') ||
+                          errorMessage.includes('relation') ||
+                          error.message === 'Not Found'
+
+        if (isNotFound) {
+          // Table doesn't exist yet - silently return empty state without logging
+          setNotifications([])
+          setUnreadCount(0)
+          setLoading(false)
+          return
+        }
+        throw error
+      }
 
       const notificationList = data || []
       setNotifications(notificationList)
       setUnreadCount(notificationList.filter((n: any) => !n.read).length)
     } catch (error) {
-      logError('Error fetching notifications', error)
+      // Only log non-404 errors
+      const errorCode = (error as any)?.code
+      if (errorCode !== 'PGRST116' && errorCode !== '42P01') {
+        logError('Error fetching notifications', error)
+      }
+      // Set empty state even on error to prevent repeated failures
+      setNotifications([])
+      setUnreadCount(0)
     } finally {
       setLoading(false)
     }
@@ -103,7 +128,10 @@ export function useNotifications() {
   useEffect(() => {
     fetchNotifications()
 
-    // Subscribe to new notifications
+    // Only subscribe to notifications if the table exists
+    // We'll skip realtime subscriptions for now since the table doesn't exist
+    // Uncomment this when the notifications table is created
+    /*
     if (user) {
       const channel = supabase
         .channel(`notifications:${user.id}`)
@@ -125,6 +153,7 @@ export function useNotifications() {
         supabase.removeChannel(channel)
       }
     }
+    */
   }, [user])
 
   return {

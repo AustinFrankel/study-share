@@ -1,0 +1,24 @@
+<svg width="1200" height="675" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="675" fill="url(#grad1)"/>
+
+  <!-- Logo/Icon -->
+  <circle cx="600" cy="280" r="80" fill="white" opacity="0.2"/>
+  <text x="600" y="310" font-family="Arial, sans-serif" font-size="100" fill="white" text-anchor="middle">📚</text>
+
+  <!-- Title -->
+  <text x="600" y="450" font-family="Arial, sans-serif" font-size="64" font-weight="bold" fill="white" text-anchor="middle">StudyShare</text>
+
+  <!-- Subtitle -->
+  <text x="600" y="510" font-family="Arial, sans-serif" font-size="32" fill="white" text-anchor="middle" opacity="0.9">Student Study Resources</text>
+
+  <!-- Bottom text -->
+  <text x="600" y="590" font-family="Arial, sans-serif" font-size="24" fill="white" text-anchor="middle" opacity="0.7">studyshare.app</text>
+</svg>

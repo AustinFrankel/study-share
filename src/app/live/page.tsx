@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Clock, Calendar, Bell, CheckCircle2, Loader2, ChevronRight, AlertCircle, BookOpen, Users } from 'lucide-react'
+import { Clock, Calendar, Bell, CheckCircle2, Loader2, ChevronRight, AlertCircle, BookOpen, Users, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { STANDARDIZED_TESTS_2025, AP_EXAMS_2025, REGENTS_NY_2025 } from '@/lib/test-dates'
@@ -47,13 +47,25 @@ export default function LivePage() {
   const [submitted, setSubmitted] = useState(false)
   const [countdowns, setCountdowns] = useState<Record<string, TimeRemaining>>({})
   const [mounted, setMounted] = useState(false)
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
+
+  // Filters for Archived (Past) tests
+  const [archiveFilters, setArchiveFilters] = useState<{ month: string; year: string; category: string }>({ month: 'all', year: 'all', category: 'all' })
+
+  // Prevent flicker during interaction: lock updates briefly after clicks
+  const interactionLockRef = useRef(false)
+  const lockInteractions = useCallback((ms: number = 1200) => {
+    interactionLockRef.current = true
+    setTimeout(() => { interactionLockRef.current = false }, ms)
+  }, [])
 
   // Priority order: SAT, ACT, PSAT first
   const priorityTests = useMemo(() => {
-    return STANDARDIZED_TESTS_2025.sort((a, b) => {
-      const priority = { SAT: 0, ACT: 1, PSAT: 2 }
-      const aPriority = priority[a.name as keyof typeof priority] ?? 999
-      const bPriority = priority[b.name as keyof typeof priority] ?? 999
+    // Clone before sort to avoid mutating the imported array
+    return [...STANDARDIZED_TESTS_2025].sort((a, b) => {
+      const priority = { SAT: 0, ACT: 1, PSAT: 2 } as const
+      const aPriority = (priority as any)[a.name] ?? 999
+      const bPriority = (priority as any)[b.name] ?? 999
       if (aPriority !== bPriority) return aPriority - bPriority
       return a.date.getTime() - b.date.getTime()
     })
@@ -112,17 +124,31 @@ export default function LivePage() {
     setMounted(true)
 
     const updateCountdowns = () => {
+      // Skip updates while dialog open or during user interaction to avoid flicker
+      if (showWaitlistDialog || interactionLockRef.current) return
       const newCountdowns: Record<string, TimeRemaining> = {}
       allTests.forEach(test => {
         newCountdowns[test.id] = calculateCountdown(test.date)
       })
-      setCountdowns(newCountdowns)
+      setCountdowns(prev => {
+        // Avoid state churn if values didn't change
+        let changed = false
+        for (const k of Object.keys(newCountdowns)) {
+          const a = prev[k]
+          const b = newCountdowns[k]
+          if (!a || a.days !== b.days || a.hours !== b.hours || a.minutes !== b.minutes || a.seconds !== b.seconds) {
+            changed = true
+            break
+          }
+        }
+        return changed ? newCountdowns : prev
+      })
     }
 
     updateCountdowns()
     const interval = setInterval(updateCountdowns, 1000)
     return () => clearInterval(interval)
-  }, [allTests, calculateCountdown])
+  }, [allTests, calculateCountdown, showWaitlistDialog])
 
   // Categorize tests
   const categorizedTests = useMemo(() => {
@@ -146,26 +172,45 @@ export default function LivePage() {
     return { priority, ap, archived }
   }, [allTests, countdowns, getTestStatus])
 
+  // Archived filter option lists
+  const archivedMonths = useMemo<string[]>(() => {
+    const set = new Set<string>()
+    categorizedTests.archived.forEach(t => set.add(String(t.date.getMonth() + 1).padStart(2, '0')))
+    return Array.from(set).sort()
+  }, [categorizedTests.archived])
+
+  const archivedYears = useMemo<string[]>(() => {
+    const set = new Set<string>()
+    categorizedTests.archived.forEach(t => set.add(String(t.date.getFullYear())))
+    return Array.from(set).sort()
+  }, [categorizedTests.archived])
+
+  const archivedCategories = useMemo<string[]>(() => {
+    const set = new Set<string>()
+    categorizedTests.archived.forEach(t => set.add(t.category || t.name))
+    return Array.from(set).sort()
+  }, [categorizedTests.archived])
+
+  // Apply filters to archived tests
+  const filteredArchived = useMemo<TestDate[]>(() => {
+    return categorizedTests.archived.filter(t => {
+      const m = String(t.date.getMonth() + 1).padStart(2, '0')
+      const y = String(t.date.getFullYear())
+      const c = t.category || t.name
+      return (archiveFilters.month === 'all' || archiveFilters.month === m)
+        && (archiveFilters.year === 'all' || archiveFilters.year === y)
+        && (archiveFilters.category === 'all' || archiveFilters.category === c)
+    })
+  }, [categorizedTests.archived, archiveFilters])
+
   const handleTestClick = async (test: TestDate) => {
     const countdown = countdowns[test.id]
     const status = getTestStatus(test.date, countdown)
 
     if (status === 'past' || status === 'archived') {
-      // Check if test has resources
-      if (isSupabaseConfigured) {
-        const { data } = await supabase
-          .from('test_resources')
-          .select('id')
-          .eq('test_id', test.id)
-          .limit(1)
-
-        if (data && data.length > 0) {
-          router.push(`/live/test?test=${test.id}`)
-          return
-        }
-      }
-      // No resources available yet - route to Bluebook test with demo questions
+      // Navigate to the test page (Bluebook-style test interface)
       router.push(`/live/test?test=${test.id}`)
+      return
     } else {
       // Upcoming test - show waitlist
       setSelectedTest(test)
@@ -249,13 +294,15 @@ export default function LivePage() {
     const onCardClick = (e: React.MouseEvent) => {
       e.preventDefault()
       e.stopPropagation()
+      ;(e.currentTarget as HTMLButtonElement).blur()
+      lockInteractions()
       handleTestClick(test)
     }
 
     return (
       <Card
         key={test.id}
-        className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 hover:border-indigo-300 bg-white group"
+        className="relative overflow-hidden border-2 bg-white"
       >
         {mounted && <StatusIndicator status={status} countdown={countdown} />}
         <div className={`h-2 sm:h-3 bg-gradient-to-r ${test.color}`} />
@@ -338,14 +385,14 @@ export default function LivePage() {
           </div>
 
           <Button
-            className={`w-full bg-gradient-to-r ${test.color} hover:opacity-90 text-white font-semibold py-5 sm:py-6 text-sm sm:text-base shadow-lg hover:shadow-xl transition-all`}
+            className={`w-full bg-gradient-to-r ${test.color} hover:opacity-90 text-white font-semibold py-5 sm:py-6 text-sm sm:text-base shadow-lg hover:shadow-xl transition-colors`}
             onClick={onCardClick}
             type="button"
           >
             {isPast ? (
               <>
                 <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                View Materials
+                View
               </>
             ) : (
               <>
@@ -362,7 +409,6 @@ export default function LivePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <Navigation />
-
       <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 md:py-10">
         {/* Hero Header */}
         <div className="text-center mb-6 sm:mb-8 md:mb-10">
@@ -417,15 +463,81 @@ export default function LivePage() {
           </div>
         </div>
 
-        {/* SAT, ACT, PSAT Section */}
+        {/* SAT, ACT, PSAT Section with Grouping */}
         <section className="mb-10 sm:mb-12">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6">
             SAT, ACT & PSAT
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
-            {categorizedTests.priority.map(test => (
-              <TestCard key={test.id} test={test} />
-            ))}
+          <div className="space-y-6">
+            {(() => {
+              // Group tests by name (SAT, ACT, PSAT)
+              const groupedByName: Record<string, TestDate[]> = {}
+              categorizedTests.priority.forEach(test => {
+                if (!groupedByName[test.name]) {
+                  groupedByName[test.name] = []
+                }
+                groupedByName[test.name].push(test)
+              })
+
+              // Sort each group by date (newest date first)
+              Object.keys(groupedByName).forEach(name => {
+                groupedByName[name].sort((a, b) => b.date.getTime() - a.date.getTime())
+              })
+
+              return Object.entries(groupedByName).map(([testName, tests]) => {
+                const mostRecentTest = tests[0]
+                const hasMultiple = tests.length > 1
+                const isExpanded = expandedGroups[testName]
+
+                return (
+                  <div key={testName} className="space-y-4">
+                    {/* Show most recent test */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
+                      <TestCard test={mostRecentTest} />
+
+                      {/* Show expand button if multiple tests exist */}
+                      {hasMultiple && !isExpanded && (
+                        <div className="flex items-center justify-center">
+                          <Button
+                            onClick={() => setExpandedGroups(prev => ({ ...prev, [testName]: true }))}
+                            variant="outline"
+                            className="h-full w-full border-2 border-dashed border-gray-300 hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+                          >
+                            <div className="flex flex-col items-center gap-2">
+                              <ChevronDown className="w-8 h-8 text-gray-400" />
+                              <span className="text-sm font-medium text-gray-600">
+                                Show {tests.length - 1} more {testName} date{tests.length - 1 > 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Show additional tests when expanded */}
+                    {hasMultiple && isExpanded && (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
+                          {tests.slice(1).map(test => (
+                            <TestCard key={test.id} test={test} />
+                          ))}
+                        </div>
+                        <div className="flex justify-center">
+                          <Button
+                            onClick={() => setExpandedGroups(prev => ({ ...prev, [testName]: false }))}
+                            variant="outline"
+                            className="flex items-center gap-2"
+                          >
+                            <ChevronUp className="w-4 h-4" />
+                            Show less
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )
+              })
+            })()}
           </div>
         </section>
 
@@ -443,20 +555,137 @@ export default function LivePage() {
           </section>
         )}
 
-        {/* Archived Tests Section */}
+        {/* Archived Tests Section with Filters */}
         {categorizedTests.archived.length > 0 && (
           <section className="mb-10 sm:mb-12">
             <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4 sm:p-6">
               <div className="flex items-center gap-3 mb-4 sm:mb-6">
                 <AlertCircle className="w-6 h-6 text-gray-500" />
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-700">
-                  Past Tests (Archived)
-                </h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-700 flex-1">Past Tests (Archived)</h2>
+                {/* Simple Filters to the right on wide screens */}
+                <div className="hidden md:flex items-center gap-3">
+                  <select
+                    className="border rounded-md px-2 py-1 text-sm"
+                    value={archiveFilters.month}
+                    onChange={(e) => setArchiveFilters(prev => ({ ...prev, month: e.target.value }))}
+                    aria-label="Filter month"
+                  >
+                    <option value="all">Month</option>
+                    {archivedMonths.map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                  <select
+                    className="border rounded-md px-2 py-1 text-sm"
+                    value={archiveFilters.year}
+                    onChange={(e) => setArchiveFilters(prev => ({ ...prev, year: e.target.value }))}
+                    aria-label="Filter year"
+                  >
+                    <option value="all">Year</option>
+                    {archivedYears.map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                  <select
+                    className="border rounded-md px-2 py-1 text-sm"
+                    value={archiveFilters.category}
+                    onChange={(e) => setArchiveFilters(prev => ({ ...prev, category: e.target.value }))}
+                    aria-label="Filter category"
+                  >
+                    <option value="all">Subject/Type</option>
+                    {archivedCategories.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
-                {categorizedTests.archived.map(test => (
-                  <TestCard key={test.id} test={test} />
-                ))}
+
+              {/* Mobile filters */}
+              <div className="md:hidden grid grid-cols-3 gap-2 mb-4">
+                <select className="border rounded-md px-2 py-1 text-xs" value={archiveFilters.month} onChange={(e) => setArchiveFilters(prev => ({ ...prev, month: e.target.value }))}>
+                  <option value="all">Month</option>
+                  {archivedMonths.map(m => (<option key={m} value={m}>{m}</option>))}
+                </select>
+                <select className="border rounded-md px-2 py-1 text-xs" value={archiveFilters.year} onChange={(e) => setArchiveFilters(prev => ({ ...prev, year: e.target.value }))}>
+                  <option value="all">Year</option>
+                  {archivedYears.map(y => (<option key={y} value={y}>{y}</option>))}
+                </select>
+                <select className="border rounded-md px-2 py-1 text-xs" value={archiveFilters.category} onChange={(e) => setArchiveFilters(prev => ({ ...prev, category: e.target.value }))}>
+                  <option value="all">Subject</option>
+                  {archivedCategories.map(c => (<option key={c} value={c}>{c}</option>))}
+                </select>
+              </div>
+
+              <div className="space-y-6">
+                {(() => {
+                  // Group archived tests by name (SAT, ACT, etc.)
+                  const groupedByName: Record<string, TestDate[]> = {}
+                  filteredArchived.forEach(test => {
+                    if (!groupedByName[test.name]) {
+                      groupedByName[test.name] = []
+                    }
+                    groupedByName[test.name].push(test)
+                  })
+
+                  // Sort each group by date (newest date first)
+                  Object.keys(groupedByName).forEach(name => {
+                    groupedByName[name].sort((a, b) => b.date.getTime() - a.date.getTime())
+                  })
+
+                  return Object.entries(groupedByName).map(([testName, tests]) => {
+                    const mostRecentTest = tests[0]
+                    const hasMultiple = tests.length > 1
+                    const isExpanded = expandedGroups[`archived-${testName}`]
+
+                    return (
+                      <div key={`archived-${testName}`} className="space-y-4">
+                        {/* Show most recent test */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
+                          <TestCard test={mostRecentTest} />
+
+                          {/* Show expand button if multiple tests exist */}
+                          {hasMultiple && !isExpanded && (
+                            <div className="flex items-center justify-center">
+                              <Button
+                                onClick={() => setExpandedGroups(prev => ({ ...prev, [`archived-${testName}`]: true }))}
+                                variant="outline"
+                                className="h-full w-full border-2 border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-colors"
+                              >
+                                <div className="flex flex-col items-center gap-2">
+                                  <ChevronDown className="w-8 h-8 text-gray-400" />
+                                  <span className="text-sm font-medium text-gray-600">
+                                    View {tests.length - 1} Past {testName} Test{tests.length - 1 > 1 ? 's' : ''}
+                                  </span>
+                                </div>
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Show additional tests when expanded */}
+                        {hasMultiple && isExpanded && (
+                          <>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
+                              {tests.slice(1).map(test => (
+                                <TestCard key={test.id} test={test} />
+                              ))}
+                            </div>
+                            <div className="flex justify-center">
+                              <Button
+                                onClick={() => setExpandedGroups(prev => ({ ...prev, [`archived-${testName}`]: false }))}
+                                variant="outline"
+                                className="flex items-center gap-2"
+                              >
+                                <ChevronUp className="w-4 h-4" />
+                                Show less
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )
+                  })
+                })()}
               </div>
             </div>
           </section>

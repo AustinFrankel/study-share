@@ -314,7 +314,7 @@ export default function WaitlistAdminPage() {
                       <TableHead>Test</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
-                      <TableHead>Signup Date</TableHead>
+                      <TableHead>Signup Date/Time</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -323,7 +323,7 @@ export default function WaitlistAdminPage() {
                         <TableCell className="font-medium">{entry.test_name}</TableCell>
                         <TableCell>{entry.name || 'N/A'}</TableCell>
                         <TableCell>{entry.email}</TableCell>
-                        <TableCell>{new Date(entry.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell>{new Date(entry.created_at).toLocaleString()}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

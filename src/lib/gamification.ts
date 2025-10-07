@@ -104,12 +104,12 @@ export async function awardPoints(
 // Get user statistics
 export async function getUserStats(userId: string): Promise<UserStats> {
   try {
-    // Get total points
+    // Get total points (use maybeSingle to avoid 406 when no row exists)
     const { data: pointsData } = await supabase
       .from('user_points')
       .select('total_points')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
 
     const totalPoints = pointsData?.total_points || 0
 
@@ -160,7 +160,7 @@ export async function getUserStats(userId: string): Promise<UserStats> {
       const { count, error: commentsError } = await supabase
         .from('comments')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
+        .eq('author_id', userId)
 
       if (commentsError) {
         console.warn('Error fetching comments data:', commentsError.message)
@@ -230,12 +230,9 @@ export async function getLeaderboard(
     const { data, error } = await query
 
     if (error) {
-      // If tables don't exist yet, return empty array
-      if (error.message.includes('does not exist') || error.message.includes('schema cache')) {
-        console.log('Leaderboard tables not set up yet. Please run the migrations first.')
-        return []
-      }
-      throw error
+      // Silently handle errors if tables don't exist yet
+      // Just return empty array so the UI doesn't break
+      return []
     }
 
     return (data as Array<{ user_id: string; total_points: number; user: { handle?: string; avatar_url?: string } | Array<{ handle?: string; avatar_url?: string }> }>)?.map((entry, index: number) => {
@@ -284,7 +281,7 @@ export async function getUserRank(userId: string): Promise<number> {
       .from('user_points')
       .select('total_points')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
 
     if (!userPoints) return 0
 

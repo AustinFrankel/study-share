@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
@@ -16,7 +16,6 @@ import { supabase } from '@/lib/supabase'
 import { User as UserType, Resource } from '@/lib/types'
 import Navigation from '@/components/Navigation'
 import Leaderboard from '@/components/Leaderboard'
-import UsernameEditor from '@/components/UsernameEditor'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -72,99 +71,103 @@ function ProfilePageContent() {
   const [accessInfo, setAccessInfo] = useState<{ viewsThisMonth: number; maxViewsThisMonth: number; adsWatchedThisMonth: number; canView: boolean; canWatchAd: boolean } | null>(null)
   const [watchingAd, setWatchingAd] = useState(false)
   const [avatarUploading, setAvatarUploading] = useState(false)
+  const fetchInitiated = useRef(false) // Track if fetch has been initiated
+  const avatarInputRef = useRef<HTMLInputElement | null>(null) // New: file input ref to avoid event.currentTarget null
+
+  // New: inline handle editor state
+  const [isEditingHandle, setIsEditingHandle] = useState(false)
+  const [newHandle, setNewHandle] = useState('')
+  const [savingHandle, setSavingHandle] = useState(false)
 
   // Determine if viewing own profile or another user's profile
   const isOwnProfile = !targetUserHandle || (user && user.handle === targetUserHandle)
   const displayUser = isOwnProfile ? user : targetUser
 
   useEffect(() => {
-    if (targetUserHandle && targetUserHandle !== user?.handle) {
-      // Fetch target user data
-      fetchTargetUser()
-    } else if (user) {
-      // Fetch own profile data
-      fetchUserData()
+    // Reset fetch flag when user or targetUserHandle changes
+    fetchInitiated.current = false
+  }, [user?.id, targetUserHandle])
+
+  useEffect(() => {
+    let isMounted = true // Prevent state updates if component unmounts
+
+    const fetchData = async () => {
+      // Skip if no user or already fetched
+      if (!user?.id || fetchInitiated.current) return
+      
+      fetchInitiated.current = true // Mark as initiated
+      setLoading(true)
+      
+      try {
+        if (targetUserHandle && targetUserHandle !== user.handle) {
+          // Fetch target user data
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('handle', targetUserHandle)
+            .single()
+
+          if (userError) throw userError
+          if (!isMounted) return
+          
+          setTargetUser(userData)
+
+          const [userStats, userRank, recentRes] = await Promise.all([
+            getUserStats(userData.id),
+            getUserRank(userData.id),
+            fetchRecentResourcesForUser(userData.id)
+          ])
+
+          if (!isMounted) return
+          
+          setStats(userStats)
+          setRank(userRank)
+          setRecentResources(recentRes)
+        } else {
+          // Fetch own profile data
+          const [userStats, userRank, recentRes, userAccessInfo] = await Promise.all([
+            getUserStats(user.id),
+            getUserRank(user.id),
+            fetchRecentResourcesForUser(user.id),
+            getUserAccessInfo(user.id)
+          ])
+
+          if (!isMounted) return
+          
+          setStats(userStats)
+          setRank(userRank)
+          setRecentResources(recentRes)
+          setAccessInfo(userAccessInfo)
+          
+          console.log('fetchUserData completed:', {
+            userStats,
+            userRank,
+            recentResourcesCount: recentRes?.length || 0,
+          })
+        }
+      } catch (error) {
+        console.error('Error fetching profile data:', error)
+        if (isMounted) setError('Failed to load profile')
+      } finally {
+        if (isMounted) setLoading(false)
+      }
     }
-  }, [user, targetUserHandle])
+
+    fetchData()
+
+    return () => {
+      isMounted = false // Cleanup on unmount
+    }
+  }, [user?.id, targetUserHandle]) // depend on user ID only
 
   useEffect(() => {
     if (user && activeTab === 'activity' && userActivity.length === 0) {
       fetchUserActivity()
     }
-  }, [activeTab, user])
-
-  const fetchTargetUser = async () => {
-    if (!targetUserHandle) return
-
-    setLoading(true)
-    try {
-      // Fetch target user by handle
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('handle', targetUserHandle)
-        .single()
-
-      if (userError) throw userError
-      setTargetUser(userData)
-
-      // Fetch target user's stats and resources (public data only)
-      const [userStats, userRank, recentRes] = await Promise.all([
-        getUserStats(userData.id),
-        getUserRank(userData.id),
-        fetchRecentResourcesForUser(userData.id)
-      ])
-
-      setStats(userStats)
-      setRank(userRank)
-      setRecentResources(recentRes)
-    } catch (error) {
-      console.error('Error fetching target user data:', error)
-      setError('User not found')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchUserData = async () => {
-    if (!user) return
-
-    setLoading(true)
-    try {
-      const [userStats, userRank, recentRes, userAccessInfo] = await Promise.all([
-        getUserStats(user.id),
-        getUserRank(user.id),
-        fetchRecentResources(),
-        getUserAccessInfo(user.id)
-      ])
-
-      setStats(userStats)
-      setRank(userRank)
-      setRecentResources(recentRes)
-      setAccessInfo(userAccessInfo)
-      
-      console.log('fetchUserData completed:', {
-        userStats,
-        userRank,
-        recentResourcesCount: recentRes?.length || 0,
-        recentRes
-      })
-    } catch (error) {
-      console.error('Error fetching user data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchRecentResources = async () => {
-    if (!user) return []
-    return fetchRecentResourcesForUser(user.id)
-  }
+  }, [activeTab, user?.id]) // Only depend on user ID
 
   const fetchRecentResourcesForUser = async (userId: string) => {
     try {
-      console.log('Fetching resources for user:', userId)
-      
       // First try a simple query to see if resources exist
       const { data: simpleData, error: simpleError } = await supabase
         .from('resources')
@@ -174,11 +177,9 @@ function ProfilePageContent() {
         .limit(10)
       
       if (simpleError) {
-        console.error('Simple resources query failed:', simpleError.message)
+        // Silently return empty array if query fails
         return []
       }
-      
-      console.log('Simple resources found:', simpleData?.length || 0)
       
       if (!simpleData || simpleData.length === 0) {
         return []
@@ -202,15 +203,13 @@ function ProfilePageContent() {
         .limit(10)
 
       if (error) {
-        console.warn('Complex query failed, falling back to simple data:', error.message)
         // Return simple data if complex query fails - type assertion needed for fallback
         return simpleData as Resource[]
       }
 
-      console.log('Complex resources found:', data?.length || 0)
       return (data || []) as Resource[]
     } catch (error) {
-      logError('Error fetching recent resources', error)
+      // Silently return empty array on any error
       return []
     }
   }
@@ -254,7 +253,6 @@ function ProfilePageContent() {
       setTimeout(() => setError(''), 2500)
       return
     }
-    // 5MB limit
     if (file.size > 5 * 1024 * 1024) {
       setError('Image too large (max 5MB)')
       setTimeout(() => setError(''), 2500)
@@ -291,14 +289,19 @@ function ProfilePageContent() {
       if (updateError) throw updateError
 
       await refreshUser()
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error uploading avatar:', e)
-      setError('Failed to upload avatar')
-      setTimeout(() => setError(''), 2500)
+      if (typeof e?.message === 'string' && e.message.toLowerCase().includes('bucket not found')) {
+        setError("Avatar storage bucket missing. Create a public bucket named 'avatars' in Supabase → Storage.")
+      } else {
+        setError('Failed to upload avatar')
+      }
+      setTimeout(() => setError(''), 3000)
     } finally {
       setAvatarUploading(false)
-      // Clear input value so same file can be re-selected
-      e.currentTarget.value = ''
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = ''
+      }
     }
   }
 
@@ -555,21 +558,39 @@ function ProfilePageContent() {
     }
   }
 
+  // New: regenerate via existing handler
   const handleRegenerateHandle = async () => {
-    if (!user) return
-
     setRegeneratingHandle(true)
     try {
-      const { error } = await regenerateHandle(user.id)
+      const { handle, error } = await regenerateHandle(user!.id)
       if (error) throw error
-
       await refreshUser()
-      setHandleRegenerated(true)
-      setTimeout(() => setHandleRegenerated(false), 3000)
-    } catch (error) {
-      console.error('Error regenerating handle:', error)
+    } catch (err) {
+      console.error('Failed to regenerate handle:', err)
     } finally {
       setRegeneratingHandle(false)
+    }
+  }
+
+  // New: inline save handle
+  const saveInlineHandle = async () => {
+    if (!user || !newHandle.trim()) {
+      setIsEditingHandle(false)
+      return
+    }
+    setSavingHandle(true)
+    try {
+      const trimmed = newHandle.trim()
+      const { error } = await supabase.from('users').update({ handle: trimmed }).eq('id', user.id)
+      if (error) throw error
+      await refreshUser()
+      setIsEditingHandle(false)
+    } catch (err) {
+      console.error('Failed to update handle:', err)
+      setError('Failed to update username')
+      setTimeout(() => setError(''), 2500)
+    } finally {
+      setSavingHandle(false)
     }
   }
 
@@ -770,15 +791,15 @@ function ProfilePageContent() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Left Column - Stats and Profile */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+          {/* Left Column - Stats and Profile - Now Wider */}
+          <div className="space-y-6">
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <>
                 {/* User Info Card with Username Editor on the right */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Card>
+                <div className="grid grid-cols-1 gap-6 items-start">
+                  <Card className="min-h-[400px]">
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -791,30 +812,57 @@ function ProfilePageContent() {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <h2 className="text-xl font-mono font-semibold">{displayUser?.handle}</h2>
+                            {!isEditingHandle ? (
+                              <h2 className="text-2xl font-mono font-semibold break-all">{displayUser?.handle}</h2>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  value={newHandle}
+                                  onChange={(e) => setNewHandle(e.target.value)}
+                                  className="h-9 font-mono text-base w-64"
+                                  placeholder="Enter new username"
+                                />
+                                <Button size="sm" onClick={saveInlineHandle} disabled={savingHandle}>
+                                  {savingHandle ? 'Saving...' : 'Save'}
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => setIsEditingHandle(false)} disabled={savingHandle}>Cancel</Button>
+                              </div>
+                            )}
                             <p className="text-sm text-gray-600">
                               Member since {displayUser?.created_at ? new Date(displayUser.created_at).toLocaleDateString() : 'Unknown'}
                             </p>
                           </div>
                         </div>
                         {isOwnProfile && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleRegenerateHandle}
-                            disabled={regeneratingHandle}
-                          >
-                            <Shuffle className="w-4 h-4 mr-2" />
-                            {regeneratingHandle ? 'Generating...' : 'New Handle'}
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            {!isEditingHandle ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => { setIsEditingHandle(true); setNewHandle(displayUser?.handle || '') }}
+                              >
+                                Edit
+                              </Button>
+                            ) : null}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleRegenerateHandle}
+                              disabled={regeneratingHandle}
+                            >
+                              <Shuffle className="w-4 h-4 mr-2" />
+                              {regeneratingHandle ? 'Generating...' : 'New Handle'}
+                            </Button>
+                          </div>
                         )}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                     {isOwnProfile && (
                       <div className="mb-4">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <input
+                            ref={avatarInputRef}
                             id="avatar-upload-input"
                             type="file"
                             accept="image/*"
@@ -836,8 +884,8 @@ function ProfilePageContent() {
                               Remove
                             </Button>
                           )}
+                          <span className="text-xs text-gray-500">PNG/JPG up to 5MB</span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">PNG/JPG up to 5MB</p>
                       </div>
                     )}
 
@@ -851,8 +899,7 @@ function ProfilePageContent() {
                         <div className="text-sm text-gray-600">Global Rank</div>
                       </div>
                     </div>
-                    
-                    {/* Monthly View Limit Section - Only show for own profile */}
+
                     {isOwnProfile && accessInfo && (
                       <div className="border-t pt-4">
                         <h4 className="font-medium text-gray-900 mb-3">Monthly Access</h4>
@@ -864,39 +911,23 @@ function ProfilePageContent() {
                                 {accessInfo.viewsThisMonth} / {accessInfo.maxViewsThisMonth}
                               </span>
                             </div>
-                            <Progress 
-                              value={(accessInfo.viewsThisMonth / accessInfo.maxViewsThisMonth) * 100} 
-                              className="h-2"
-                            />
+                            <Progress value={(accessInfo.viewsThisMonth / accessInfo.maxViewsThisMonth) * 100} className="h-2" />
                           </div>
-                          
-                          <div className="flex items-center justify-between">
+                          <div className="flex flex-wrap gap-2 items-center justify-between">
                             <div className="text-sm text-gray-600">
                               Ads watched: {accessInfo.adsWatchedThisMonth} / {ACCESS_GATE_CONFIG.MAX_ADS_PER_MONTH}
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                               {accessInfo.canWatchAd && (
-                                <Button
-                                  size="sm"
-                                  onClick={handleWatchAd}
-                                  disabled={watchingAd}
-                                  className="bg-green-600 hover:bg-green-700"
-                                >
+                                <Button size="sm" onClick={handleWatchAd} disabled={watchingAd} className="bg-green-600 hover:bg-green-700">
                                   {watchingAd ? 'Watching...' : 'Watch Ad (+1 view)'}
                                 </Button>
                               )}
-                              <Button
-                                size="sm"
-                                asChild
-                                className="bg-blue-600 hover:bg-blue-700"
-                              >
-                                <Link href="/upload">
-                                  Upload (+5 views)
-                                </Link>
+                              <Button size="sm" asChild className="bg-blue-600 hover:bg-blue-700">
+                                <Link href="/upload">Upload (+5 views)</Link>
                               </Button>
                             </div>
                           </div>
-                          
                           {!accessInfo.canView && (
                             <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
                               ⚠️ Monthly view limit reached. Upload resources or watch ads to get more views.
@@ -908,14 +939,8 @@ function ProfilePageContent() {
                     </CardContent>
                   </Card>
 
-                  {/* Username Editor - Only show for own profile */}
-                  {isOwnProfile && displayUser && (
-                    <UsernameEditor
-                      userId={displayUser.id}
-                      currentHandle={displayUser.handle}
-                      onHandleUpdated={refreshUser}
-                    />
-                  )}
+                  {/* Remove separate UsernameEditor card */}
+                  {/* (Deleted) */}
                 </div>
 
             {/* Stats Grid */}

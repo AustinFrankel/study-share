@@ -177,6 +177,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return currentUser
           })
         }
+      } else if (event === 'SIGNED_OUT') {
+        // Clear user data on sign out
+        console.log('User signed out')
+        setUser(null)
+        setLoading(false)
+      } else if (event === 'TOKEN_REFRESHED' && !newSession) {
+        // Token refresh failed, clear session
+        console.log('Token refresh failed, clearing session')
+        setUser(null)
+        setLoading(false)
       } else {
         // No session, clear user data
         console.log('No session, clearing user data')

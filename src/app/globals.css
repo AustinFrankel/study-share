@@ -127,6 +127,34 @@
     overscroll-behavior-y: none;
     background-color: white;
   }
+
+  /* Improved keyboard focus states for accessibility */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [role="button"]:focus-visible {
+    outline: 2px solid rgb(79, 70, 229);
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+  }
+
+  /* Skip to content link for accessibility */
+  .skip-to-content {
+    position: absolute;
+    top: -100px;
+    left: 0;
+    background: rgb(79, 70, 229);
+    color: white;
+    padding: 0.5rem 1rem;
+    z-index: 100;
+    border-radius: 0 0 0.25rem 0;
+  }
+
+  .skip-to-content:focus {
+    top: 0;
+  }
 }
 
 /* Animated gradient glow utility for the search bar wrapper */
@@ -146,6 +174,22 @@
 
 .animate-fade-in {
   animation: fade-in 0.5s ease-out;
+}
+
+/* Smooth entrance for cards and content */
+@keyframes fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-slide-in {
+  animation: fade-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Smooth page transitions */
@@ -256,11 +300,45 @@
   }
 }
 
-/* Add subtle transition to all navigation links */
-a {
+/* Micro-animation for route changes */
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Subtle link hover - no background, just color change */
+.nav-link {
+  position: relative;
+  transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -2px;
+  left: 50%;
+  background-color: currentColor;
+  transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1), left 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-link:hover::after {
+  width: 100%;
+  left: 0;
+}
+
+/* Add subtle transition to navigation links only - not all links to prevent hover glitches */
+nav a {
   transition: opacity 0.2s ease, color 0.2s ease;
 }
 
-a:active {
+nav a:active {
   opacity: 0.7;
 }
