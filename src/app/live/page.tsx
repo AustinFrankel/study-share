@@ -555,137 +555,177 @@ export default function LivePage() {
           </section>
         )}
 
-        {/* Archived Tests Section with Filters */}
+        {/* Archived Tests Section with Better Formatting */}
         {categorizedTests.archived.length > 0 && (
           <section className="mb-10 sm:mb-12">
-            <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4 sm:p-6">
-              <div className="flex items-center gap-3 mb-4 sm:mb-6">
-                <AlertCircle className="w-6 h-6 text-gray-500" />
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-700 flex-1">Past Tests (Archived)</h2>
-                {/* Simple Filters to the right on wide screens */}
-                <div className="hidden md:flex items-center gap-3">
-                  <select
-                    className="border rounded-md px-2 py-1 text-sm"
-                    value={archiveFilters.month}
+            <div className="bg-white border-2 border-gray-300 rounded-2xl shadow-lg overflow-hidden">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-gray-700 via-gray-600 to-gray-700 px-4 sm:px-6 py-4 sm:py-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                    <h2 className="text-xl sm:text-2xl font-bold text-white">Past Tests Archive</h2>
+                  </div>
+                  
+                  {/* Desktop Filters */}
+                  <div className="hidden md:flex items-center gap-2">
+                    <select
+                      className="bg-white border-2 border-gray-300 rounded-lg px-3 py-1.5 text-sm font-medium hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
+                      value={archiveFilters.month}
+                      onChange={(e) => setArchiveFilters(prev => ({ ...prev, month: e.target.value }))}
+                      aria-label="Filter month"
+                    >
+                      <option value="all">All Months</option>
+                      {archivedMonths.map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="bg-white border-2 border-gray-300 rounded-lg px-3 py-1.5 text-sm font-medium hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
+                      value={archiveFilters.year}
+                      onChange={(e) => setArchiveFilters(prev => ({ ...prev, year: e.target.value }))}
+                      aria-label="Filter year"
+                    >
+                      <option value="all">All Years</option>
+                      {archivedYears.map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="bg-white border-2 border-gray-300 rounded-lg px-3 py-1.5 text-sm font-medium hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
+                      value={archiveFilters.category}
+                      onChange={(e) => setArchiveFilters(prev => ({ ...prev, category: e.target.value }))}
+                      aria-label="Filter category"
+                    >
+                      <option value="all">All Subjects</option>
+                      {archivedCategories.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Mobile Filters */}
+                <div className="md:hidden grid grid-cols-3 gap-2 mt-3">
+                  <select 
+                    className="bg-white border-2 border-gray-300 rounded-lg px-2 py-1.5 text-xs font-medium"
+                    value={archiveFilters.month} 
                     onChange={(e) => setArchiveFilters(prev => ({ ...prev, month: e.target.value }))}
-                    aria-label="Filter month"
                   >
                     <option value="all">Month</option>
-                    {archivedMonths.map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
+                    {archivedMonths.map(m => (<option key={m} value={m}>{m}</option>))}
                   </select>
-                  <select
-                    className="border rounded-md px-2 py-1 text-sm"
-                    value={archiveFilters.year}
+                  <select 
+                    className="bg-white border-2 border-gray-300 rounded-lg px-2 py-1.5 text-xs font-medium"
+                    value={archiveFilters.year} 
                     onChange={(e) => setArchiveFilters(prev => ({ ...prev, year: e.target.value }))}
-                    aria-label="Filter year"
                   >
                     <option value="all">Year</option>
-                    {archivedYears.map(y => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
+                    {archivedYears.map(y => (<option key={y} value={y}>{y}</option>))}
                   </select>
-                  <select
-                    className="border rounded-md px-2 py-1 text-sm"
-                    value={archiveFilters.category}
+                  <select 
+                    className="bg-white border-2 border-gray-300 rounded-lg px-2 py-1.5 text-xs font-medium"
+                    value={archiveFilters.category} 
                     onChange={(e) => setArchiveFilters(prev => ({ ...prev, category: e.target.value }))}
-                    aria-label="Filter category"
                   >
-                    <option value="all">Subject/Type</option>
-                    {archivedCategories.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
+                    <option value="all">Subject</option>
+                    {archivedCategories.map(c => (<option key={c} value={c}>{c}</option>))}
                   </select>
                 </div>
               </div>
 
-              {/* Mobile filters */}
-              <div className="md:hidden grid grid-cols-3 gap-2 mb-4">
-                <select className="border rounded-md px-2 py-1 text-xs" value={archiveFilters.month} onChange={(e) => setArchiveFilters(prev => ({ ...prev, month: e.target.value }))}>
-                  <option value="all">Month</option>
-                  {archivedMonths.map(m => (<option key={m} value={m}>{m}</option>))}
-                </select>
-                <select className="border rounded-md px-2 py-1 text-xs" value={archiveFilters.year} onChange={(e) => setArchiveFilters(prev => ({ ...prev, year: e.target.value }))}>
-                  <option value="all">Year</option>
-                  {archivedYears.map(y => (<option key={y} value={y}>{y}</option>))}
-                </select>
-                <select className="border rounded-md px-2 py-1 text-xs" value={archiveFilters.category} onChange={(e) => setArchiveFilters(prev => ({ ...prev, category: e.target.value }))}>
-                  <option value="all">Subject</option>
-                  {archivedCategories.map(c => (<option key={c} value={c}>{c}</option>))}
-                </select>
-              </div>
+              {/* Content Area with Better Spacing */}
+              <div className="p-4 sm:p-6 bg-gradient-to-br from-gray-50 to-white">
+                <div className="space-y-8">
+                  {(() => {
+                    // Group archived tests by name (SAT, ACT, etc.)
+                    const groupedByName: Record<string, TestDate[]> = {}
+                    filteredArchived.forEach(test => {
+                      if (!groupedByName[test.name]) {
+                        groupedByName[test.name] = []
+                      }
+                      groupedByName[test.name].push(test)
+                    })
 
-              <div className="space-y-6">
-                {(() => {
-                  // Group archived tests by name (SAT, ACT, etc.)
-                  const groupedByName: Record<string, TestDate[]> = {}
-                  filteredArchived.forEach(test => {
-                    if (!groupedByName[test.name]) {
-                      groupedByName[test.name] = []
+                    // Sort each group by date (newest date first)
+                    Object.keys(groupedByName).forEach(name => {
+                      groupedByName[name].sort((a, b) => b.date.getTime() - a.date.getTime())
+                    })
+
+                    if (Object.keys(groupedByName).length === 0) {
+                      return (
+                        <div className="text-center py-12">
+                          <AlertCircle className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                          <p className="text-lg text-gray-600">No archived tests match your filters.</p>
+                          <Button
+                            onClick={() => setArchiveFilters({ month: 'all', year: 'all', category: 'all' })}
+                            variant="outline"
+                            className="mt-4"
+                          >
+                            Clear Filters
+                          </Button>
+                        </div>
+                      )
                     }
-                    groupedByName[test.name].push(test)
-                  })
 
-                  // Sort each group by date (newest date first)
-                  Object.keys(groupedByName).forEach(name => {
-                    groupedByName[name].sort((a, b) => b.date.getTime() - a.date.getTime())
-                  })
+                    return Object.entries(groupedByName).map(([testName, tests]) => {
+                      const mostRecentTest = tests[0]
+                      const hasMultiple = tests.length > 1
+                      const isExpanded = expandedGroups[`archived-${testName}`]
 
-                  return Object.entries(groupedByName).map(([testName, tests]) => {
-                    const mostRecentTest = tests[0]
-                    const hasMultiple = tests.length > 1
-                    const isExpanded = expandedGroups[`archived-${testName}`]
+                      return (
+                        <div key={`archived-${testName}`} className="space-y-4">
+                          {/* Show most recent test */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
+                            <TestCard test={mostRecentTest} />
 
-                    return (
-                      <div key={`archived-${testName}`} className="space-y-4">
-                        {/* Show most recent test */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
-                          <TestCard test={mostRecentTest} />
+                            {/* Show expand button if multiple tests exist */}
+                            {hasMultiple && !isExpanded && (
+                              <div className="flex items-center justify-center">
+                                <Button
+                                  onClick={() => setExpandedGroups(prev => ({ ...prev, [`archived-${testName}`]: true }))}
+                                  variant="outline"
+                                  className="h-full w-full min-h-[200px] border-2 border-dashed border-gray-400 hover:border-indigo-500 hover:bg-indigo-50 transition-all duration-200"
+                                >
+                                  <div className="flex flex-col items-center gap-3 p-4">
+                                    <ChevronDown className="w-10 h-10 text-gray-500" />
+                                    <span className="text-base font-semibold text-gray-700">
+                                      View {tests.length - 1} More
+                                    </span>
+                                    <span className="text-sm text-gray-600">
+                                      Past {testName} Test{tests.length - 1 > 1 ? 's' : ''}
+                                    </span>
+                                  </div>
+                                </Button>
+                              </div>
+                            )}
+                          </div>
 
-                          {/* Show expand button if multiple tests exist */}
-                          {hasMultiple && !isExpanded && (
-                            <div className="flex items-center justify-center">
-                              <Button
-                                onClick={() => setExpandedGroups(prev => ({ ...prev, [`archived-${testName}`]: true }))}
-                                variant="outline"
-                                className="h-full w-full border-2 border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-colors"
-                              >
-                                <div className="flex flex-col items-center gap-2">
-                                  <ChevronDown className="w-8 h-8 text-gray-400" />
-                                  <span className="text-sm font-medium text-gray-600">
-                                    View {tests.length - 1} Past {testName} Test{tests.length - 1 > 1 ? 's' : ''}
-                                  </span>
-                                </div>
-                              </Button>
-                            </div>
+                          {/* Show additional tests when expanded */}
+                          {hasMultiple && isExpanded && (
+                            <>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
+                                {tests.slice(1).map(test => (
+                                  <TestCard key={test.id} test={test} />
+                                ))}
+                              </div>
+                              <div className="flex justify-center pt-2">
+                                <Button
+                                  onClick={() => setExpandedGroups(prev => ({ ...prev, [`archived-${testName}`]: false }))}
+                                  variant="outline"
+                                  className="flex items-center gap-2 hover:bg-gray-100"
+                                >
+                                  <ChevronUp className="w-4 h-4" />
+                                  Show Less
+                                </Button>
+                              </div>
+                            </>
                           )}
                         </div>
-
-                        {/* Show additional tests when expanded */}
-                        {hasMultiple && isExpanded && (
-                          <>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
-                              {tests.slice(1).map(test => (
-                                <TestCard key={test.id} test={test} />
-                              ))}
-                            </div>
-                            <div className="flex justify-center">
-                              <Button
-                                onClick={() => setExpandedGroups(prev => ({ ...prev, [`archived-${testName}`]: false }))}
-                                variant="outline"
-                                className="flex items-center gap-2"
-                              >
-                                <ChevronUp className="w-4 h-4" />
-                                Show less
-                              </Button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )
-                  })
-                })()}
+                      )
+                    })
+                  })()}
+                </div>
               </div>
             </div>
           </section>
