@@ -82,7 +82,7 @@ export default function Navigation() {
           {/* Logo - Always show full name */}
           <div className="flex items-center flex-shrink-0">
             <Link href="/" className="flex items-center space-x-2 group" aria-label="StudyShare Home">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 p-1.5 sm:p-2 shadow-md transition-all duration-200 group-hover:scale-110 group-hover:shadow-lg flex items-center justify-center" aria-hidden="true">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black p-1.5 sm:p-2 shadow-md transition-all duration-200 group-hover:scale-110 group-hover:shadow-lg flex items-center justify-center" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="white" className="w-full h-full">
                   <path d="M12 3L1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
                 </svg>
@@ -198,7 +198,7 @@ export default function Navigation() {
                   <DialogContent className="max-w-md mx-auto w-[calc(100%-2rem)] sm:w-full max-h-[90vh] overflow-y-auto my-auto">
                     <DialogHeader>
                       <div className="flex flex-col items-center gap-3 mb-2">
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 p-3 shadow-lg flex items-center justify-center">
+                        <div className="w-16 h-16 rounded-full bg-black p-3 shadow-lg flex items-center justify-center">
                           <svg viewBox="0 0 24 24" fill="white" className="w-full h-full">
                             <path d="M12 3L1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
                           </svg>

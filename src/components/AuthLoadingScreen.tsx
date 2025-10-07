@@ -50,7 +50,7 @@ export default function AuthLoadingScreen() {
         <CardContent className="pt-8 pb-8">
           <div className="text-center space-y-6">
             {/* Logo/Icon */}
-            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+            <div className="w-16 h-16 mx-auto bg-black rounded-full flex items-center justify-center shadow-lg">
               <svg viewBox="0 0 24 24" fill="white" className="w-10 h-10">
                 <path d="M12 3L1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
               </svg>

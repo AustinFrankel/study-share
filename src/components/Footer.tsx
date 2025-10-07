@@ -8,7 +8,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid gap-8 md:grid-cols-4 text-sm">
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 p-1.5 shadow-md flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-black p-1.5 shadow-md flex items-center justify-center">
               <svg viewBox="0 0 24 24" fill="white" className="w-full h-full">
                 <path d="M12 3L1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
               </svg>
