@@ -211,7 +211,6 @@ CREATE POLICY "Authenticated users can insert files"
 -- 5. Create users table if needed (for profiles)
 CREATE TABLE IF NOT EXISTS public.users (
   id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email text UNIQUE NOT NULL,
   display_name text,
   handle text UNIQUE,
   bio text,
@@ -222,8 +221,24 @@ CREATE TABLE IF NOT EXISTS public.users (
   updated_at timestamptz DEFAULT now()
 );
 
+-- Add email column if it doesn't exist (some apps need it in public.users)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'users' 
+    AND column_name = 'email'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN email text;
+  END IF;
+END $$;
+
+-- Create unique index on email if it doesn't exist
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON public.users(email) WHERE email IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_users_handle ON public.users(handle);
-CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
+CREATE INDEX IF NOT EXISTS idx_users_id ON public.users(id);
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
