@@ -51,9 +51,9 @@ All with **real professor names** in Computer Science, Mathematics, Physics, and
 Add to `comprehensive-schools-teachers.sql` following this pattern:
 
 ```sql
-INSERT INTO schools (name, type, location, created_at) VALUES
-('Your School Name', 'high_school', 'City, State', NOW())
-ON CONFLICT (name) DO UPDATE SET type = EXCLUDED.type;
+INSERT INTO schools (name, city, state) VALUES
+('Your School Name', 'City Name', 'ST')
+ON CONFLICT (name) DO UPDATE SET city = EXCLUDED.city, state = EXCLUDED.state;
 
 DO $$
 DECLARE
@@ -61,9 +61,10 @@ DECLARE
 BEGIN
   SELECT id INTO school_id FROM schools WHERE name = 'Your School Name';
 
-  INSERT INTO teachers (name, school_id, department, created_at) VALUES
-  ('Prof. First Last', school_id, 'Department', NOW()),
-  ('Ms. Jane Doe', school_id, 'Math', NOW())
+  INSERT INTO teachers (name, school_id) VALUES
+  ('Prof. First Last', school_id),
+  ('Ms. Jane Doe', school_id),
+  ('Dr. John Smith', school_id)
   ON CONFLICT (name, school_id) DO NOTHING;
 END $$;
 ```
