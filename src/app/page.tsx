@@ -9,15 +9,11 @@ import { Resource } from '@/lib/types'
 import { useAuth } from '@/contexts/AuthContext'
 import { getUserViewedResources } from '@/lib/access-gate'
 import Navigation from '@/components/Navigation'
-import SearchBar from '@/components/SearchBar'
 import FacetFilters from '@/components/FacetFilters'
-import ResourceCard from '@/components/ResourceCard'
-import TestCard from '@/components/TestCard'
-import Leaderboard from '@/components/Leaderboard'
-import SetupGuide from '@/components/SetupGuide'
+import SearchBar from '@/components/SearchBar'
 import { Button } from '@/components/ui/button'
-import { TrendingUp, BookOpen, Users, Star, Calendar } from 'lucide-react'
-import { STANDARDIZED_TESTS_2025, AP_EXAMS_2025 } from '@/lib/test-dates'
+import { Calendar, Users, Star, BookOpen, Trash2, MoreVertical } from 'lucide-react'
+import { STANDARDIZED_TESTS_2025, AP_EXAMS_2025, REGENTS_NY_2025 } from '@/lib/test-dates'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,7 +31,7 @@ function HomeContent() {
 
   // Get upcoming tests for homepage
   const upcomingTests = useMemo(() => {
-    const allTests = [...STANDARDIZED_TESTS_2025, ...AP_EXAMS_2025].map(test => ({
+    const allTests = [...STANDARDIZED_TESTS_2025, ...AP_EXAMS_2025, ...REGENTS_NY_2025].map(test => ({
       ...test,
       category: test.category || (STANDARDIZED_TESTS_2025.includes(test as any) ? 'Standardized Test' : 'AP Exam')
     }))
@@ -344,11 +340,6 @@ function HomeContent() {
       console.error('Error deleting resource:', error)
       alert('Failed to delete resource. Please try again.')
     }
-  }
-
-  // Show setup guide if Supabase is not configured
-  if (!isSupabaseConfigured) {
-    return <SetupGuide />
   }
 
   return (
