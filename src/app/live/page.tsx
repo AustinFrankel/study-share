@@ -302,10 +302,10 @@ export default function LivePage() {
     return (
       <Card
         key={test.id}
-        className="relative overflow-hidden border-2 bg-white"
+        className="relative overflow-hidden border-2 bg-white flex flex-col h-full"
       >
         {mounted && <StatusIndicator status={status} countdown={countdown} />}
-        <div className={`h-2 sm:h-3 bg-gradient-to-r ${test.color}`} />
+        <div className={`h-2 sm:h-3 bg-gradient-to-r ${test.color} flex-shrink-0`} />
 
         <CardHeader className="pb-3 sm:pb-4 px-4 sm:px-6">
           <div className="flex items-start justify-between">
@@ -324,10 +324,10 @@ export default function LivePage() {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6 pb-4 sm:pb-6">
+        <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6 pb-4 sm:pb-6 flex-1 flex flex-col">
           {/* Description removed per user request */}
 
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-3 sm:p-4 space-y-2 sm:space-y-3 shadow-inner">
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-3 sm:p-4 space-y-2 sm:space-y-3 shadow-inner flex-1 flex flex-col justify-between">
             <div className="flex items-center gap-2 text-sm text-gray-700">
               <Calendar className="w-4 h-4 text-indigo-600 flex-shrink-0" />
               <div className="flex flex-col">
@@ -463,11 +463,16 @@ export default function LivePage() {
           </div>
         </div>
 
-        {/* SAT, ACT, PSAT Section with Grouping */}
+        {/* Active Tests Section with Grouping */}
         <section className="mb-10 sm:mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6">
-            SAT, ACT & PSAT
-          </h2>
+          <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl shadow-lg overflow-hidden mb-6">
+            <div className="px-6 py-4 flex items-center gap-3">
+              <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
+              <h2 className="text-2xl sm:text-3xl font-bold text-white">
+                Active Tests
+              </h2>
+            </div>
+          </div>
           <div className="space-y-6">
             {(() => {
               // Group tests by name (SAT, ACT, PSAT)
@@ -491,48 +496,42 @@ export default function LivePage() {
 
                 return (
                   <div key={testName} className="space-y-4">
-                    {/* Show most recent test */}
+                    {/* Show most recent test or all tests in a unified grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
                       <TestCard test={mostRecentTest} />
-
-                      {/* Show expand button if multiple tests exist */}
-                      {hasMultiple && !isExpanded && (
-                        <div className="flex items-center justify-center">
-                          <Button
-                            onClick={() => setExpandedGroups(prev => ({ ...prev, [testName]: true }))}
-                            variant="outline"
-                            className="h-full w-full border-2 border-dashed border-gray-300 hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
-                          >
-                            <div className="flex flex-col items-center gap-2">
-                              <ChevronDown className="w-8 h-8 text-gray-400" />
-                              <span className="text-sm font-medium text-gray-600">
-                                Show {tests.length - 1} more {testName} date{tests.length - 1 > 1 ? 's' : ''}
-                              </span>
-                            </div>
-                          </Button>
-                        </div>
-                      )}
+                      {/* Show additional tests inline when expanded */}
+                      {hasMultiple && isExpanded && tests.slice(1).map(test => (
+                        <TestCard key={test.id} test={test} />
+                      ))}
                     </div>
 
-                    {/* Show additional tests when expanded */}
-                    {hasMultiple && isExpanded && (
-                      <>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
-                          {tests.slice(1).map(test => (
-                            <TestCard key={test.id} test={test} />
-                          ))}
-                        </div>
-                        <div className="flex justify-center">
-                          <Button
-                            onClick={() => setExpandedGroups(prev => ({ ...prev, [testName]: false }))}
-                            variant="outline"
-                            className="flex items-center gap-2"
-                          >
-                            <ChevronUp className="w-4 h-4" />
-                            Show less
-                          </Button>
-                        </div>
-                      </>
+                    {/* Show expand/collapse button if multiple tests exist */}
+                    {hasMultiple && (
+                      <div className="flex justify-center mt-2">
+                        <Button
+                          onClick={() => setExpandedGroups(prev => ({ ...prev, [testName]: !prev[testName] }))}
+                          variant="outline"
+                          className="border-2 border-dashed border-gray-300 hover:border-indigo-400 hover:bg-indigo-50 transition-colors px-6 py-3"
+                        >
+                          <div className="flex items-center gap-2">
+                            {isExpanded ? (
+                              <>
+                                <ChevronUp className="w-5 h-5 text-gray-400" />
+                                <span className="text-sm font-medium text-gray-600">
+                                  Show less
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="w-5 h-5 text-gray-400" />
+                                <span className="text-sm font-medium text-gray-600">
+                                  Show {tests.length - 1} more {testName} date{tests.length - 1 > 1 ? 's' : ''}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </Button>
+                      </div>
                     )}
                   </div>
                 )
@@ -560,11 +559,11 @@ export default function LivePage() {
           <section className="mb-10 sm:mb-12">
             <div className="bg-white border-2 border-gray-300 rounded-2xl shadow-lg overflow-hidden">
               {/* Header */}
-              <div className="bg-gradient-to-r from-gray-700 via-gray-600 to-gray-700 px-4 sm:px-6 py-4 sm:py-5">
+              <div className="bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 px-4 sm:px-6 py-4 sm:py-5">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <AlertCircle className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                    <h2 className="text-xl sm:text-2xl font-bold text-white">Past Tests Archive</h2>
+                    <div className="w-3 h-3 bg-gray-300 rounded-full" />
+                    <h2 className="text-xl sm:text-2xl font-bold text-white">Past Tests</h2>
                   </div>
                   
                   {/* Desktop Filters */}
@@ -668,62 +667,66 @@ export default function LivePage() {
                       )
                     }
 
-                    return Object.entries(groupedByName).map(([testName, tests]) => {
-                      const mostRecentTest = tests[0]
-                      const hasMultiple = tests.length > 1
-                      const isExpanded = expandedGroups[`archived-${testName}`]
-
-                      return (
-                        <div key={`archived-${testName}`} className="space-y-4">
-                          {/* Show most recent test */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
-                            <TestCard test={mostRecentTest} />
-
-                            {/* Show expand button if multiple tests exist */}
-                            {hasMultiple && !isExpanded && (
-                              <div className="flex items-center justify-center">
-                                <Button
-                                  onClick={() => setExpandedGroups(prev => ({ ...prev, [`archived-${testName}`]: true }))}
-                                  variant="outline"
-                                  className="h-full w-full min-h-[200px] border-2 border-dashed border-gray-400 hover:border-indigo-500 hover:bg-indigo-50 transition-all duration-200"
-                                >
-                                  <div className="flex flex-col items-center gap-3 p-4">
-                                    <ChevronDown className="w-10 h-10 text-gray-500" />
-                                    <span className="text-base font-semibold text-gray-700">
-                                      View {tests.length - 1} More
-                                    </span>
-                                    <span className="text-sm text-gray-600">
-                                      Past {testName} Test{tests.length - 1 > 1 ? 's' : ''}
-                                    </span>
-                                  </div>
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Show additional tests when expanded */}
-                          {hasMultiple && isExpanded && (
-                            <>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
-                                {tests.slice(1).map(test => (
-                                  <TestCard key={test.id} test={test} />
-                                ))}
-                              </div>
-                              <div className="flex justify-center pt-2">
-                                <Button
-                                  onClick={() => setExpandedGroups(prev => ({ ...prev, [`archived-${testName}`]: false }))}
-                                  variant="outline"
-                                  className="flex items-center gap-2 hover:bg-gray-100"
-                                >
-                                  <ChevronUp className="w-4 h-4" />
-                                  Show Less
-                                </Button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      )
+                    // Order groups so SAT appears before ACT, then others alphabetically
+                    const priority = ['SAT', 'ACT']
+                    const orderedEntries = Object.entries(groupedByName).sort(([a], [b]) => {
+                      const ia = priority.indexOf(a)
+                      const ib = priority.indexOf(b)
+                      if (ia !== -1 || ib !== -1) {
+                        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
+                      }
+                      return a.localeCompare(b)
                     })
+
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
+                        {orderedEntries.map(([testName, tests]) => {
+                          const mostRecentTest = tests[0]
+                          const hasMultiple = tests.length > 1
+                          const key = `archived-${testName}`
+                          const isExpanded = expandedGroups[key]
+
+                          return (
+                            <div key={key} className="flex flex-col gap-3">
+                              {/* Primary card for this test group */}
+                              <TestCard test={mostRecentTest} />
+
+                              {/* View more button under the SAT/ACT card, left-aligned */}
+                              {hasMultiple && !isExpanded && (
+                                <div className="flex justify-start">
+                                  <Button
+                                    onClick={() => setExpandedGroups(prev => ({ ...prev, [key]: true }))}
+                                    variant="outline"
+                                    className="border-2 border-dashed border-gray-400 hover:border-indigo-500 hover:bg-indigo-50 transition-all duration-200 px-4 py-2"
+                                  >
+                                    View {tests.length - 1} More Past {testName} Test{tests.length - 1 > 1 ? 's' : ''}
+                                  </Button>
+                                </div>
+                              )}
+
+                              {/* Additional dates for this test group */}
+                              {hasMultiple && isExpanded && (
+                                <>
+                                  {tests.slice(1).map(test => (
+                                    <TestCard key={test.id} test={test} />
+                                  ))}
+                                  <div className="flex justify-start">
+                                    <Button
+                                      onClick={() => setExpandedGroups(prev => ({ ...prev, [key]: false }))}
+                                      variant="outline"
+                                      className="flex items-center gap-2 hover:bg-gray-100"
+                                    >
+                                      <ChevronUp className="w-4 h-4" />
+                                      Show Less
+                                    </Button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
                   })()}
                 </div>
               </div>

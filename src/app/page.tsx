@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Head from 'next/head'
+import { useSearchParams } from 'next/navigation'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { logActivity } from '@/lib/activity'
 import { Resource } from '@/lib/types'
@@ -20,8 +21,9 @@ export const dynamic = 'force-dynamic'
 
 // Note: Metadata is inherited from layout.tsx, but we enhance it here for the homepage
 
-export default function Home() {
+function HomeContent() {
   const { user } = useAuth()
+  const searchParams = useSearchParams()
   const [resources, setResources] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
   const [schools, setSchools] = useState<Array<{ id: string; name: string }>>([])
@@ -37,6 +39,15 @@ export default function Home() {
       setLoading(false)
     }
   }, [])
+
+  // Force refresh when coming from upload (refresh param in URL)
+  useEffect(() => {
+    const refresh = searchParams?.get('refresh')
+    if (refresh && isSupabaseConfigured) {
+      console.log('🔄 Forcing homepage refresh due to new upload')
+      fetchResources()
+    }
+  }, [searchParams?.get('refresh')])
 
   useEffect(() => {
     if (user && isSupabaseConfigured) {
@@ -64,7 +75,12 @@ export default function Home() {
   const fetchResources = async () => {
     try {
       console.log('Fetching resources from homepage...')
-      // Only select necessary columns to reduce data transfer
+      if (!isSupabaseConfigured) {
+        setResources([])
+        setLoading(false)
+        return
+      }
+      // Primary query with relations
       const { data, error } = await supabase
         .from('resources')
         .select(`
@@ -95,13 +111,23 @@ export default function Home() {
         .limit(20)
 
       if (error) {
-        // If tables don't exist yet, just show empty state
-        if (error.message.includes('does not exist') || error.message.includes('schema cache')) {
-          console.log('Database tables not set up yet. Please run the migrations first.')
-          setResources([])
-          return
+        // If complex join fails (e.g., missing FKs/tables), try a minimal fallback query
+        console.warn('Primary resources query failed, trying fallback:', error.message)
+        const { data: fallback, error: fbErr } = await supabase
+          .from('resources')
+          .select('id,title,type,created_at')
+          .order('created_at', { ascending: false })
+          .limit(20)
+        if (fbErr) {
+          if (fbErr.message.includes('does not exist') || fbErr.message.includes('schema cache')) {
+            console.log('Database tables not set up yet. Please run the migrations first.')
+            setResources([])
+            return
+          }
+          throw fbErr
         }
-        throw error
+        setResources((fallback || []) as unknown as Resource[])
+        return
       }
 
       // Transform the data to flatten tags
@@ -409,5 +435,23 @@ export default function Home() {
 
       </main>
     </div>
+  )
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+        <Navigation />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mx-auto mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+          </div>
+        </div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   )
 }

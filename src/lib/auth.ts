@@ -221,7 +221,32 @@ async function createUserDirectly(authUser: { id: string; email?: string }): Pro
   try {
     console.log('🔨 Creating user directly in database...')
     
-    const handle = generateRandomHandle()
+    // Generate unique handle by checking for duplicates
+    let handle = generateRandomHandle()
+    let attempts = 0
+    const maxAttempts = 10
+    
+    while (attempts < maxAttempts) {
+      const { data: existing } = await supabase
+        .from('users')
+        .select('id')
+        .eq('handle', handle)
+        .single()
+      
+      if (!existing) {
+        break // Handle is unique
+      }
+      
+      handle = generateRandomHandle()
+      attempts++
+    }
+    
+    if (attempts >= maxAttempts) {
+      console.error('Failed to generate unique handle after', maxAttempts, 'attempts')
+      return null
+    }
+    
+    console.log('Generated unique handle:', handle)
     const { data: newUser, error: insertError } = await queryWithTimeout<SupabaseResult<User>>(
       supabase
         .from('users')
@@ -273,8 +298,29 @@ export async function regenerateHandle(userId: string): Promise<{ handle?: strin
       return { error: 'Not authenticated' }
     }
 
-    // Generate a new anonymous handle locally
-    const handle = generateRandomHandle()
+    // Generate a new unique anonymous handle
+    let handle = generateRandomHandle()
+    let attempts = 0
+    const maxAttempts = 10
+    
+    while (attempts < maxAttempts) {
+      const { data: existing } = await supabase
+        .from('users')
+        .select('id')
+        .eq('handle', handle)
+        .single()
+      
+      if (!existing) {
+        break // Handle is unique
+      }
+      
+      handle = generateRandomHandle()
+      attempts++
+    }
+    
+    if (attempts >= maxAttempts) {
+      return { error: 'Failed to generate unique username after multiple attempts' }
+    }
 
     // Persist the new handle to the database and bump handle_version
     // Read current handle_version first

@@ -57,6 +57,10 @@ function LiveUploadContent() {
     setError('')
 
     try {
+      if (!testId || !testName) {
+        throw new Error('Missing test information (testId or testName)')
+      }
+
       if (uploadType === 'image' && selectedFiles.length > 0) {
         // Process images with Google Gemini AI
         setProcessingOCR(true)
@@ -74,36 +78,70 @@ function LiveUploadContent() {
         }
 
         setOcrProgress(`Successfully extracted ${ocrResult.questions.length} questions! Saving to database...`)
+        console.log('Saving to test_resources:', {
+          test_id: testId,
+          test_name: testName,
+          questions_count: ocrResult.questions.length
+        })
 
         // Save questions to test_resources table with upsert to make visible to everyone
-        const { error: dbError } = await supabase
+        const { data: upsertData, error: dbError } = await supabase
           .from('test_resources')
           .upsert({
             test_id: testId,
             test_name: testName,
             questions: ocrResult.questions,
             uploader_id: user?.id || null,
+            updated_at: new Date().toISOString(),
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
           }, {
             onConflict: 'test_id',
             ignoreDuplicates: false
           })
+          .select()
 
         if (dbError) {
-          console.error('Database error:', dbError)
+          console.error('Database error:', dbError.message)
           setProcessingOCR(false)
           throw new Error(`Database error: ${dbError.message || 'Failed to save to database'}`)
         }
 
+        console.log('✅ Successfully saved to database', upsertData)
+        
+        // Verify the data was actually saved - avoid .single() to be resilient to duplicates
+        const { data: verifyDataArr, error: verifyError } = await supabase
+          .from('test_resources')
+          .select('*')
+          .eq('test_id', testId)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+        
+        if (verifyError) {
+          console.error('Verification failed:', verifyError.message)
+          setProcessingOCR(false)
+          throw new Error(`Verification failed: ${verifyError.message}`)
+        }
+
+        const verifyData = Array.isArray(verifyDataArr) ? verifyDataArr[0] : verifyDataArr
+        
+        console.log('✅ Verified:', verifyData?.questions?.length || 0, 'questions saved')
+        
+        if (!verifyData?.questions || verifyData.questions.length === 0) {
+          console.error('Questions array is empty!')
+          setProcessingOCR(false)
+          throw new Error('Questions were not saved properly')
+        }
+        
         setOcrProgress('Test successfully uploaded and now visible to everyone!')
         setProcessingOCR(false)
         setSuccess(true)
 
-        // Redirect after 2.5 seconds
+        // Wait longer to ensure database propagation, then redirect with cache bust
         setTimeout(() => {
-          router.push(`/live/test?test=${testId}`)
-        }, 2500)
+          console.log('Redirecting to test page...')
+          // Force a hard navigation with cache bust to ensure fresh data
+          window.location.href = `/live/test?test=${testId}&t=${Date.now()}`
+        }, 3000)
       } else if (uploadType === 'text') {
         // Save text content directly (future enhancement: parse text to questions)
         const { error: dbError } = await supabase

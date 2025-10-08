@@ -217,40 +217,53 @@ export async function getLeaderboard(
   limit: number = 10
 ) {
   try {
+    // Query user_points materialized view joined with users table
     const query = supabase
       .from('user_points')
-      .select(
-        `user_id, total_points, user:users(handle, avatar_url)`
-      )
+      .select('user_id, total_points')
       .order('total_points', { ascending: false })
       .limit(limit)
 
-    // For school-specific leaderboard, we'd need to join through resources
-    // This is a simplified version
-    const { data, error } = await query
+    const { data: pointsData, error } = await query
 
     if (error) {
       // Silently handle errors if tables don't exist yet
       // Just return empty array so the UI doesn't break
+      console.warn('Error fetching leaderboard:', error)
       return []
     }
 
-    return (data as Array<{ user_id: string; total_points: number; user: { handle?: string; avatar_url?: string } | Array<{ handle?: string; avatar_url?: string }> }>)?.map((entry, index: number) => {
-      const joinedUser = entry?.user
-      const handle = Array.isArray(joinedUser)
-        ? (joinedUser[0]?.handle || null)
-        : joinedUser?.handle
-      const avatar_url = Array.isArray(joinedUser)
-        ? (joinedUser[0]?.avatar_url || undefined)
-        : joinedUser?.avatar_url
+    if (!pointsData || pointsData.length === 0) {
+      return []
+    }
+
+    // Fetch user details separately to avoid join issues
+    const userIds = pointsData.map((entry: { user_id: string }) => entry.user_id)
+    const { data: usersData, error: usersError } = await supabase
+      .from('users')
+      .select('id, handle, avatar_url')
+      .in('id', userIds)
+
+    if (usersError) {
+      console.warn('Error fetching user details:', usersError)
+    }
+
+    // Create a map for quick user lookup
+    const usersMap = new Map<string, { id: string; handle: string; avatar_url?: string }>(
+      (usersData || []).map((user: { id: string; handle: string; avatar_url?: string }) => [user.id, user])
+    )
+
+    // Combine points and user data
+    return pointsData.map((entry: { user_id: string; total_points: number }, index: number) => {
+      const user = usersMap.get(entry.user_id)
       return {
         rank: index + 1,
         userId: entry.user_id,
-        handle: handle || `user-${String(entry.user_id).slice(0, 4)}`,
-        points: entry.total_points,
-        avatar_url
+        handle: user?.handle || `user-${String(entry.user_id).slice(0, 8)}`,
+        points: entry.total_points || 0,
+        avatar_url: user?.avatar_url
       }
-    }) || []
+    })
   } catch (error) {
     console.error('Error getting leaderboard:', error)
     return []

@@ -261,7 +261,11 @@ function ProfilePageContent() {
 
     setAvatarUploading(true)
     try {
-      const filePath = `${user.id}/${Date.now()}-${file.name}`
+      // Sanitize filename: remove spaces, apostrophes, and special characters
+      const sanitizedFileName = file.name
+        .replace(/['\s]+/g, '_')  // Replace spaces and apostrophes with underscores
+        .replace(/[^a-zA-Z0-9._-]/g, '')  // Remove other special characters
+      const filePath = `${user.id}/${Date.now()}-${sanitizedFileName}`
       const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, {
         cacheControl: '3600',
         upsert: true

@@ -87,7 +87,7 @@ export default function Navigation() {
                   <path d="M12 3L1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
                 </svg>
               </div>
-              <span className="font-bold text-lg sm:text-xl transition-colors duration-200 group-hover:text-indigo-600">Study Share</span>
+              <span className="font-bold text-lg sm:text-xl transition-all duration-200 group-hover:scale-105">Study Share</span>
             </Link>
           </div>
 
@@ -153,7 +153,7 @@ export default function Navigation() {
                         )}
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowSignOutConfirm(true)} className="cursor-pointer transition-colors duration-200 hover:bg-red-50 hover:text-red-600">
+                    <DropdownMenuItem onClick={() => setShowSignOutConfirm(true) } className="cursor-pointer transition-colors duration-200 hover:bg-red-50 hover:text-red-600">
                       <LogOut className="w-4 h-4 mr-2" />
                       Sign out
                     </DropdownMenuItem>

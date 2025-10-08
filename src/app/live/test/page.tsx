@@ -73,52 +73,75 @@ const TestViewPageContent = () => {
     setUserAnswers(initAnswers)
   }, [questions])
 
-  // Load test questions
+  // Load test questions with retry logic
   useEffect(() => {
-    const loadQuestions = async () => {
-      if (!testId) return
+    let retryCount = 0
+    const maxRetries = 3
 
+    const loadQuestions = async () => {
+      if (!testId) {
+        console.log('No testId provided')
+        return
+      }
+
+      console.log('Loading questions for test:', testId, retryCount > 0 ? `(retry ${retryCount})` : '')
       setLoadingResources(true)
+
       try {
+        // Fetch the latest row for this test_id. Avoid .single() which throws 406 if duplicates exist.
         const { data, error } = await supabase
           .from('test_resources')
-          .select('questions')
+          .select('*')
           .eq('test_id', testId)
-          .single()
+          .order('updated_at', { ascending: false })
+          .limit(1)
 
-        // Silently handle 404 errors if table doesn't exist
         if (error) {
           const errorCode = (error as any)?.code
-          const is404 = errorCode === 'PGRST116' || errorCode === '42P01' ||
-                       error.message?.includes('does not exist') ||
-                       error.message === 'Not Found'
+          const is404 = errorCode === 'PGRST116' || (error as any)?.details?.includes('Not Found') ||
+                       (error as any)?.message?.includes('does not exist') ||
+                       (error as any)?.message === 'Not Found'
 
-          // Silently ignore all errors (table doesn't exist yet or no data)
-          // No resources available
+          if (!is404) {
+            console.error('Error loading test resources:', (error as any)?.message || error)
+          }
+
           setHasResources(false)
           setLoadingResources(false)
           return
         }
 
-        if (data?.questions) {
-          setQuestions(data.questions as Question[])
+        const row = Array.isArray(data) ? data[0] : data
+
+        if (row?.questions && Array.isArray(row.questions) && row.questions.length > 0) {
+          console.log('✅ Loaded', row.questions.length, 'questions')
+          setQuestions(row.questions as Question[])
           setHasResources(true)
           setLoadingResources(false)
         } else {
-          // No resources available - test is locked
+          console.log('No questions found for this test')
+
+          // Retry if we came from upload (has timestamp query param) and haven't exceeded max retries
+          if (retryCount < maxRetries && searchParams?.get('t')) {
+            retryCount++
+            console.log(`Will retry in ${retryCount}s...`)
+            setTimeout(() => loadQuestions(), retryCount * 1000)
+            return
+          }
+
           setHasResources(false)
           setLoadingResources(false)
         }
       } catch (err) {
         // Silently handle errors
-        console.log('Unable to load test resources')
+        console.log('Unable to load test resources:', err)
         setHasResources(false)
         setLoadingResources(false)
       }
     }
 
     loadQuestions()
-  }, [testId])
+  }, [testId, searchParams])
 
   // Timer countdown
   useEffect(() => {
@@ -265,7 +288,7 @@ const TestViewPageContent = () => {
           <p className="text-gray-600 mb-8">
             This test does not have any questions uploaded yet. An administrator needs to upload content before this test becomes available.
           </p>
-          <div className="flex gap-4 justify-center">
+          <div className="flex gap-4 justify-center flex-wrap">
             <Button
               onClick={() => router.push('/live')}
               variant="outline"

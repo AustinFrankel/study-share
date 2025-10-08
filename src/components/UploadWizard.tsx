@@ -134,47 +134,61 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
 
   // Handle pending files from drag and drop
   useEffect(() => {
+    console.log('UploadWizard: pendingFiles changed', {
+      hasPendingFiles: !!pendingFiles,
+      pendingFilesCount: pendingFiles?.length || 0,
+      filesCount: files.length,
+      currentStep,
+      processedIds: pendingFilesProcessedRef.current
+    })
+    
     if (pendingFiles && pendingFiles.length > 0) {
       // Check if we've already processed these exact files to prevent duplicates
       const unprocessedFiles = pendingFiles.filter(file => 
         !pendingFilesProcessedRef.current.includes(file.id)
       )
       
+      console.log('Unprocessed files:', unprocessedFiles.length)
+      
       if (unprocessedFiles.length === 0) {
+        console.log('All files already processed, clearing')
         clearPendingFiles() // Clear them since we've already processed
         return
       }
       
-      const initializeFiles = async () => {
-        const uploadFiles = unprocessedFiles.map((pendingFile) => ({
-          id: generateId(),
-          file: pendingFile.file,
-          progress: 0,
-          uploaded: false
-        }))
-        
-        // Mark these files as processed
-        pendingFilesProcessedRef.current.push(...unprocessedFiles.map(f => f.id))
-        
-        setFiles(prev => [...prev, ...uploadFiles])
-        
-        // Auto-generate title from first file if no title is set
-        if (!title.trim() && unprocessedFiles[0]) {
-          const fileName = unprocessedFiles[0].file.name.replace(/\.[^/.]+$/, '') // Remove extension
-          const cleanedName = fileName.replace(/[-_]/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
-          setTitle(cleanedName)
-        }
-        
-        // Clear pending files after processing
-        clearPendingFiles()
-        
-        // Go to step 2 (resource details) so user can review/edit the title
-        if (currentStep < 2) {
-          setCurrentStep(2)
-        }
+      console.log('Processing pending files:', unprocessedFiles.map(f => f.file.name))
+      
+      const uploadFiles = unprocessedFiles.map((pendingFile) => ({
+        id: generateId(),
+        file: pendingFile.file,
+        progress: 0,
+        uploaded: false
+      }))
+      
+      // Mark these files as processed
+      pendingFilesProcessedRef.current.push(...unprocessedFiles.map(f => f.id))
+      
+      setFiles(prev => {
+        console.log('Adding files to state:', uploadFiles.length, 'existing:', prev.length)
+        return [...prev, ...uploadFiles]
+      })
+      
+      // Auto-generate title from first file if no title is set
+      if (!title.trim() && unprocessedFiles[0]) {
+        const fileName = unprocessedFiles[0].file.name.replace(/\.[^/.]+$/, '') // Remove extension
+        const cleanedName = fileName.replace(/[-_]/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+        console.log('Setting auto-generated title:', cleanedName)
+        setTitle(cleanedName)
       }
       
-      initializeFiles()
+      // Clear pending files after processing
+      clearPendingFiles()
+      
+      // Go to step 2 (resource details) so user can review/edit the title
+      if (currentStep < 2) {
+        console.log('Advancing to step 2')
+        setCurrentStep(2)
+      }
     }
   }, [pendingFiles, clearPendingFiles, title, currentStep])
 
@@ -602,14 +616,61 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    
-    // Completely disable direct drops on upload page to prevent conflicts with global dropzone
-    console.log('UploadWizard handleDrop: Ignoring drop to prevent duplicates')
-    return
-  }, [])
+
+    const droppedFiles = Array.from(e.dataTransfer.files || [])
+
+    if (droppedFiles.length === 0) return
+
+    // Check for duplicates
+    const existingFiles = files.map(f => ({
+      name: f.file.name,
+      size: f.file.size,
+      lastModified: f.file.lastModified
+    }))
+
+    const newFiles = droppedFiles.filter(file =>
+      !existingFiles.some(existing =>
+        existing.name === file.name &&
+        existing.size === file.size &&
+        existing.lastModified === file.lastModified
+      )
+    )
+
+    if (newFiles.length === 0) {
+      setError('All dropped files are already added')
+      return
+    }
+
+    const uploadFiles = newFiles.map((file) => ({
+      id: generateId(),
+      file,
+      progress: 0,
+      uploaded: false
+    }))
+
+    setFiles(prev => [...prev, ...uploadFiles])
+
+    // Auto-generate title from first file if no title is set
+    if (!title.trim() && newFiles[0]) {
+      const fileName = newFiles[0].name.replace(/\.[^/.]+$/, '')
+      const cleanedName = fileName.replace(/[-_]/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+      setTitle(cleanedName)
+    }
+
+    // Advance to step 2 if on step 1
+    if (currentStep === 1) {
+      setCurrentStep(2)
+      setError('')
+    }
+  }, [files, title, currentStep])
 
   const removeFile = (fileId: string) => {
-    setFiles(prev => prev.filter(f => f.id !== fileId))
+    console.log(`Removing file: ${fileId}`)
+    setFiles(prev => {
+      const newFiles = prev.filter(f => f.id !== fileId)
+      console.log(`Files after removal: ${newFiles.length}`)
+      return newFiles
+    })
   }
 
   const createFilePreviewUrl = (file: File): string => {
@@ -736,6 +797,19 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
     loadSubjects()
   }, [])
 
+  // If any files are present, ensure we auto-advance to step 2
+  useEffect(() => {
+    if (files.length > 0 && currentStep < 2) {
+      setCurrentStep(2)
+      setError('')
+    }
+  }, [files.length])
+
+  // Debug: Track file changes
+  useEffect(() => {
+    console.log(`Files state changed. Count: ${files.length}, Step: ${currentStep}`)
+  }, [files.length, currentStep])
+
   // Load teachers when school changes
   useEffect(() => {
     if (selectedSchool) {
@@ -759,15 +833,28 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
       console.log('Submit validation failed:', {
         user: !!user,
         canProceedStep1,
-        canProceedStep2, 
-        canProceedStep3
+        canProceedStep2,
+        canProceedStep3,
+        filesCount: files.length
       })
       const missingFields = []
       if (!user) missingFields.push('user authentication')
-      if (!canProceedStep1) missingFields.push('files')
-      if (!canProceedStep2) missingFields.push('resource details')
-      if (!canProceedStep3) missingFields.push('school/teacher/class selection')
-      
+      if (!canProceedStep1) {
+        missingFields.push('files')
+        // If files are missing, go back to step 1
+        setCurrentStep(1)
+      }
+      if (!canProceedStep2) {
+        missingFields.push('resource details')
+        // If title is missing, go back to step 2
+        if (canProceedStep1 && currentStep !== 2) setCurrentStep(2)
+      }
+      if (!canProceedStep3) {
+        missingFields.push('school/teacher/class selection')
+        // If class info is missing, go back to step 3
+        if (canProceedStep1 && canProceedStep2 && currentStep !== 3) setCurrentStep(3)
+      }
+
       setError(`Please complete all required fields: ${missingFields.join(', ')}`)
       return
     }
@@ -954,7 +1041,9 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
           setUploadProgress(baseProgress + (i / files.length) * uploadProgressRange * 0.2)
 
           const fileExt = uploadFile.file.name.split('.').pop()
-          const fileName = `${resource.id}/${uploadFile.id}.${fileExt}`
+          // Sanitize file extension to prevent storage errors
+          const sanitizedExt = fileExt?.replace(/[^a-zA-Z0-9]/g, '') || 'file'
+          const fileName = `${resource.id}/${uploadFile.id}.${sanitizedExt}`
           
           // Mid upload progress
           setFiles(prev => prev.map(f => 
@@ -1021,11 +1110,15 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
           console.log(`File ${i + 1}/${files.length} uploaded successfully`)
         } catch (error) {
           console.error(`Error uploading ${uploadFile.file.name}:`, error)
-          setFiles(prev => prev.map(f => 
-            f.id === uploadFile.id ? { ...f, error: 'Upload failed', progress: 0 } : f
+          setFiles(prev => prev.map(f =>
+            f.id === uploadFile.id ? { ...f, error: 'Upload failed', progress: 0, uploaded: false } : f
           ))
-          setError(`Failed to upload ${uploadFile.file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+          setError(`Failed to upload ${uploadFile.file.name}: ${errorMsg}. Please try removing and re-adding the file.`)
           setLoading(false)
+          setUploadProgress(0)
+          setProcessingStatus('')
+          // Don't reset to step 1 - stay on step 4 so user can see the error and retry
           return
         }
       }
@@ -1081,9 +1174,9 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
       setUploadSuccessMessage(`🎉 Upload successful! Resource "${resource.title}" has been uploaded successfully and is now shareable with your classmates.`)
       setUploadComplete(true)
       
-      // Auto-redirect after showing success message
+      // Auto-redirect after showing success message with cache-busting timestamp
       setTimeout(() => {
-        router.push('/browse')
+        router.push(`/browse?refresh=${Date.now()}`)
       }, 3000)
 
     } catch (error) {
@@ -1111,12 +1204,23 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
 
   const nextStep = () => {
     if (canProceed(currentStep)) {
+      console.log(`Moving from step ${currentStep} to ${currentStep + 1}. Files: ${files.length}`)
       setCurrentStep(prev => Math.min(prev + 1, 4))
       setError('')
+    } else {
+      console.log(`Cannot proceed from step ${currentStep}. Validation failed.`)
+      if (currentStep === 1 && files.length === 0) {
+        setError('Please add at least one file to continue')
+      } else if (currentStep === 2 && !title.trim()) {
+        setError('Please enter a title to continue')
+      } else if (currentStep === 3 && !canProceedStep3) {
+        setError('Please select school, teacher, and class to continue')
+      }
     }
   }
 
   const prevStep = () => {
+    console.log(`Moving from step ${currentStep} to ${currentStep - 1}. Files: ${files.length}`)
     setCurrentStep(prev => Math.max(prev - 1, 1))
     setError('')
   }
@@ -1846,6 +1950,7 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
           <Button
             onClick={handleSubmit}
             disabled={loading || !canProceedStep1 || !canProceedStep2 || !canProceedStep3 || uploadComplete}
+
             className="bg-indigo-600 hover:bg-indigo-700"
           >
             {loading ? (

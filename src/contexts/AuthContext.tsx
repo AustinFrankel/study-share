@@ -60,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
+    let hasInitialized = false
     
     // Failsafe: ensure loading never stays true forever
     const maxLoadingTimeout = setTimeout(() => {
@@ -70,6 +71,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, 12000) // 12 second maximum loading time
     
     const initializeAuth = async () => {
+      if (hasInitialized) {
+        console.log('⏭️ Auth already initialized, skipping')
+        return
+      }
+      hasInitialized = true
+      
       try {
         console.log('🚀 Initializing auth...')
         
@@ -159,42 +166,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('Auth state change:', event, !!newSession)
 
+      // Prevent re-initialization loops - only handle specific events
+      if (event === 'INITIAL_SESSION') {
+        // Skip INITIAL_SESSION as it's already handled in initializeAuth
+        console.log('⏭️ Skipping INITIAL_SESSION event (already handled)')
+        return
+      }
+
       // Always update session state
       setSession(newSession)
 
-      if (newSession) {
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-          // User just signed in or we got initial session, load user data
-          console.log('User signed in, loading user data...')
-          await refreshUser()
-        } else if (event !== 'TOKEN_REFRESHED') {
-          // For other events (not token refresh), check current state
-          setUser(currentUser => {
-            if (!currentUser) {
-              console.log('Session exists but no user data, loading...')
-              refreshUser()
-            }
-            return currentUser
-          })
-        }
+      if (newSession && event === 'SIGNED_IN') {
+        // User just signed in, load user data
+        console.log('User signed in, loading user data...')
+        await refreshUser()
       } else if (event === 'SIGNED_OUT') {
         // Clear user data on sign out
         console.log('User signed out')
         setUser(null)
         setLoading(false)
-      } else if (event === 'TOKEN_REFRESHED' && !newSession) {
-        // Token refresh failed, clear session
-        console.log('Token refresh failed, clearing session')
-        setUser(null)
+      } else if (event === 'TOKEN_REFRESHED') {
+        // Token was refreshed, no need to reload user data
+        console.log('Token refreshed')
         setLoading(false)
-      } else {
+      } else if (!newSession) {
         // No session, clear user data
         console.log('No session, clearing user data')
         setUser(null)
+        setLoading(false)
       }
-
-      // Always ensure loading is false after auth state change
-      setLoading(false)
     })
       subscription = authResult.data.subscription
     }
@@ -204,7 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription?.unsubscribe()
       clearTimeout(maxLoadingTimeout)
     }
-  }, [refreshUser])
+  }, [])
 
   return (
     <AuthContext.Provider value={{ user, session, loading, refreshUser }}>

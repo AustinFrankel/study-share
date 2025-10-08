@@ -7,6 +7,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { Resource, Comment, AiDerivative, User, File as ResourceFile } from '@/lib/types'
 import { getUserAccessInfo, recordResourceView } from '@/lib/access-gate'
 import { logActivity } from '@/lib/activity'
+import { signInWithEmail, signInWithGoogle } from '@/lib/auth'
 import Navigation from '@/components/Navigation'
 import PracticeView from '@/components/PracticeView'
 import CommentThread from '@/components/CommentThread'
@@ -22,6 +23,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { ArrowLeft, Download, FileText, Image, AlertTriangle, Eye, EyeOff, MessageCircle, Trash2, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
@@ -46,6 +50,9 @@ export default function ResourcePage() {
   const [ratingLoading, setRatingLoading] = useState(false)
   const [textFileContents, setTextFileContents] = useState<{[key: string]: string}>({})
   const [loadingTextFile, setLoadingTextFile] = useState<{[key: string]: boolean}>({})
+  const [signInEmail, setSignInEmail] = useState('')
+  const [signInLoading, setSignInLoading] = useState(false)
+  const [signInMessage, setSignInMessage] = useState('')
 
   useEffect(() => {
     if (resourceId) {
@@ -54,9 +61,13 @@ export default function ResourcePage() {
   }, [resourceId, user])
 
   const checkAccessAndFetch = async () => {
+    // Allow fetching resource data even for non-authenticated users
+    // We'll show a modal overlay for sign-in
+
     if (!user) {
-      // Anonymous users must sign in to view resources
+      // For unauthenticated users, fetch the resource but block access
       setAccessBlocked(true)
+      fetchResource()
       setLoading(false)
       return
     }
@@ -68,7 +79,7 @@ export default function ResourcePage() {
         .select('uploader_id')
         .eq('id', resourceId)
         .single()
-      
+
       // If user owns the resource, they can always view it without limits
       if (resourceData && resourceData.uploader_id === user.id) {
         // Still record the view for owners (for purple marking) but don't count against access limits
@@ -85,7 +96,7 @@ export default function ResourcePage() {
         } catch (error) {
           console.warn('Failed to record owner view (non-critical):', error)
         }
-        
+
         fetchResource()
         fetchComments()
         subscribeToComments()
@@ -100,7 +111,7 @@ export default function ResourcePage() {
         return
       }
       const accessInfo = await getUserAccessInfo(user.id)
-      
+
       if (!accessInfo.canView) {
         setAccessBlocked(true)
         setLoading(false)
@@ -111,7 +122,7 @@ export default function ResourcePage() {
       if (user.id) {
         await recordResourceView(user.id, resourceId)
       }
-      
+
       // Fetch resource data
       fetchResource()
       fetchComments()
@@ -177,9 +188,9 @@ export default function ResourcePage() {
           .from('resource_ratings')
           .select('rating')
           .eq('resource_id', resourceId)
-          .eq('rater_id', user.id)
+          .eq('user_id', user.id)
           .single()
-        
+
         userRating = ratingData?.rating
       }
 
@@ -403,11 +414,11 @@ export default function ResourcePage() {
           .upsert(
             {
               resource_id: resourceId,
-              rater_id: user.id,
+              user_id: user.id,
               rating,
               updated_at: new Date().toISOString()
             },
-            { onConflict: 'resource_id,rater_id' }
+            { onConflict: 'resource_id,user_id' }
           )
         if (upsertError) throw upsertError
         
@@ -624,6 +635,30 @@ export default function ResourcePage() {
     }
   }
 
+  const handleSignInWithEmail = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSignInLoading(true)
+    setSignInMessage('')
+
+    const { error } = await signInWithEmail(signInEmail)
+
+    if (error) {
+      setSignInMessage(error.message)
+    } else {
+      setSignInMessage('Check your email for the login link!')
+    }
+
+    setSignInLoading(false)
+  }
+
+  const handleSignInWithGoogle = async () => {
+    setSignInLoading(true)
+    setSignInMessage('')
+    const { error } = await signInWithGoogle()
+    if (error) setSignInMessage(error.message)
+    setSignInLoading(false)
+  }
+
   const handleDeleteResource = async () => {
     if (!user || !resource || resource.uploader?.id !== user.id) return
 
@@ -707,24 +742,8 @@ export default function ResourcePage() {
     )
   }
 
-  if (accessBlocked) {
-    return (
-      <div className="min-h-screen">
-        <Navigation />
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="mb-6">
-            <Button variant="ghost" asChild>
-              <Link href="/">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Home
-              </Link>
-            </Button>
-          </div>
-          <AccessGate onAccessGranted={handleAccessGranted} resourceId={resourceId} />
-        </main>
-      </div>
-    )
-  }
+  // For unauthenticated users, show the content with a modal overlay
+  const showSignInModal = accessBlocked && !user
 
   if (error || !resource) {
     return (
@@ -1220,6 +1239,81 @@ export default function ResourcePage() {
           />
         </div>
       </main>
+
+      {/* Sign-In Modal for Unauthenticated Users */}
+      <Dialog open={showSignInModal} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center">Sign In Required</DialogTitle>
+            <DialogDescription className="text-center">
+              Please sign in to view this resource and access all features
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            {/* Google Sign-In Button */}
+            <Button
+              onClick={handleSignInWithGoogle}
+              disabled={signInLoading}
+              className="w-full bg-white hover:bg-gray-50 text-gray-900 border-2 border-gray-300 h-12 text-base font-semibold shadow-sm"
+            >
+              <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Continue with Google
+            </Button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-500">Or continue with email</span>
+              </div>
+            </div>
+
+            {/* Email Sign-In Form */}
+            <form onSubmit={handleSignInWithEmail} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signin-email">Email Address</Label>
+                <Input
+                  id="signin-email"
+                  type="email"
+                  value={signInEmail}
+                  onChange={(e) => setSignInEmail(e.target.value)}
+                  placeholder="your.email@example.com"
+                  required
+                  className="h-12"
+                  disabled={signInLoading}
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={signInLoading}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 text-base font-semibold"
+              >
+                {signInLoading ? 'Sending...' : 'Send Magic Link'}
+              </Button>
+            </form>
+
+            {signInMessage && (
+              <Alert className={signInMessage.includes('Check your email') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}>
+                <AlertDescription className={signInMessage.includes('Check your email') ? 'text-green-800' : 'text-red-800'}>
+                  {signInMessage}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <p className="text-xs text-center text-gray-500 mt-4">
+              By signing in, you agree to our Terms of Service and Privacy Policy
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

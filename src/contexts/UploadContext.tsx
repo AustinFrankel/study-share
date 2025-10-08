@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useCallback, useState } from 'react'
+import { createContext, useContext, useCallback, useState, useEffect, useRef } from 'react'
 
 export interface PendingUploadFile {
   id: string
@@ -15,16 +15,75 @@ interface UploadContextType {
 
 const UploadContext = createContext<UploadContextType | null>(null)
 
-export function UploadProvider({ children }: { children: React.ReactNode }) {
-  const [pendingFiles, setPendingFilesState] = useState<PendingUploadFile[]>([])
+// Global in-memory storage that persists across component remounts
+// This is a singleton that survives React's component lifecycle
+const globalFileStorage = {
+  files: [] as PendingUploadFile[],
+  subscribers: new Set<(files: PendingUploadFile[]) => void>(),
+  
+  setFiles(files: PendingUploadFile[]) {
+    console.log('GlobalStorage: Setting', files.length, 'files')
+    this.files = files
+    this.subscribers.forEach(cb => cb(files))
+  },
+  
+  getFiles() {
+    return this.files
+  },
+  
+  clearFiles() {
+    console.log('GlobalStorage: Clearing files')
+    this.files = []
+    this.subscribers.forEach(cb => cb([]))
+  },
+  
+  subscribe(callback: (files: PendingUploadFile[]) => void) {
+    this.subscribers.add(callback)
+    return () => this.subscribers.delete(callback)
+  }
+}
 
-  // Use useCallback to memoize functions instead of useMemo
+export function UploadProvider({ children }: { children: React.ReactNode }) {
+  const [pendingFiles, setPendingFilesState] = useState<PendingUploadFile[]>(() => {
+    // Initialize with current global state
+    console.log('UploadProvider: Initializing with', globalFileStorage.getFiles().length, 'files from global storage')
+    return globalFileStorage.getFiles()
+  })
+  
+  const isInitialMount = useRef(true)
+
+  // Subscribe to global storage changes
+  useEffect(() => {
+    console.log('UploadProvider: Subscribing to global storage')
+    const unsubscribe = globalFileStorage.subscribe((files) => {
+      console.log('UploadProvider: Received update from global storage:', files.length, 'files')
+      setPendingFilesState(files)
+    })
+    
+    // On mount, sync with global storage
+    if (isInitialMount.current) {
+      const currentFiles = globalFileStorage.getFiles()
+      if (currentFiles.length > 0) {
+        console.log('UploadProvider: Syncing with global storage on mount:', currentFiles.length, 'files')
+        setPendingFilesState(currentFiles)
+      }
+      isInitialMount.current = false
+    }
+    
+    return () => {
+      unsubscribe()
+    }
+  }, [])
+
+  // Use useCallback to memoize functions
   const setPendingFiles = useCallback((files: PendingUploadFile[]) => {
-    setPendingFilesState(files)
+    console.log('UploadContext: setPendingFiles called with', files.length, 'files')
+    globalFileStorage.setFiles(files)
   }, [])
 
   const clearPendingFiles = useCallback(() => {
-    setPendingFilesState([])
+    console.log('UploadContext: clearPendingFiles called')
+    globalFileStorage.clearFiles()
   }, [])
 
   // No need to memoize the value object since the functions are now stable

@@ -39,6 +39,15 @@ function BrowseContent() {
     }
   }, [user])
 
+  // Force refresh when coming from upload (refresh param in URL)
+  useEffect(() => {
+    const refresh = searchParams.get('refresh')
+    if (refresh) {
+      console.log('🔄 Forcing browse page refresh due to new upload')
+      fetchResources()
+    }
+  }, [searchParams.get('refresh')])
+
   const fetchViewedResources = async () => {
     if (!user) return
     try {

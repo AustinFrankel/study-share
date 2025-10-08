@@ -110,9 +110,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, user: existingUser })
     }
 
-    // Create new user
+    // Create new user with unique handle
     console.log('Creating new user')
-    const handle = generateRandomHandle()
+    let handle = generateRandomHandle()
+    let attempts = 0
+    const maxAttempts = 10
+    
+    // Ensure handle is unique by checking database
+    while (attempts < maxAttempts) {
+      const { data: existing } = await dbClient
+        .from('users')
+        .select('id')
+        .eq('handle', handle)
+        .single()
+      
+      if (!existing) {
+        break // Handle is unique
+      }
+      
+      // Generate a new handle and try again
+      handle = generateRandomHandle()
+      attempts++
+    }
+    
+    if (attempts >= maxAttempts) {
+      console.error('Failed to generate unique handle after', maxAttempts, 'attempts')
+      return NextResponse.json({ error: 'Failed to generate unique username' }, { status: 500 })
+    }
+    
+    console.log('Generated unique handle:', handle)
     const { data: newUser, error: insertError } = await dbClient
       .from('users')
       .insert({ 

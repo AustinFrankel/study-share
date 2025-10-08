@@ -22,23 +22,41 @@ CREATE INDEX IF NOT EXISTS idx_test_resources_uploader_id ON test_resources(uplo
 -- Enable RLS
 ALTER TABLE test_resources ENABLE ROW LEVEL SECURITY;
 
--- Policies (everyone can read, authenticated users can insert/update)
-CREATE POLICY "Anyone can view test resources"
-  ON test_resources
-  FOR SELECT
-  USING (true);
+-- Policies (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' AND tablename = 'test_resources' AND policyname = 'Anyone can view test resources'
+  ) THEN
+    CREATE POLICY "Anyone can view test resources"
+      ON test_resources
+      FOR SELECT
+      USING (true);
+  END IF;
 
-CREATE POLICY "Authenticated users can insert test resources"
-  ON test_resources
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (true);
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' AND tablename = 'test_resources' AND policyname = 'Authenticated users can insert test resources'
+  ) THEN
+    CREATE POLICY "Authenticated users can insert test resources"
+      ON test_resources
+      FOR INSERT
+      TO authenticated
+      WITH CHECK (true);
+  END IF;
 
-CREATE POLICY "Authenticated users can update test resources"
-  ON test_resources
-  FOR UPDATE
-  TO authenticated
-  USING (true);
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' AND tablename = 'test_resources' AND policyname = 'Authenticated users can update test resources'
+  ) THEN
+    CREATE POLICY "Authenticated users can update test resources"
+      ON test_resources
+      FOR UPDATE
+      TO authenticated
+      USING (true);
+  END IF;
+END $$;
 
 COMMENT ON TABLE test_resources IS 'Stores test materials and questions';
 
@@ -65,22 +83,40 @@ CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
 -- Enable RLS
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
--- Policies (users can only see their own notifications)
-CREATE POLICY "Users can view their own notifications"
-  ON notifications
-  FOR SELECT
-  USING (auth.uid() = recipient_id);
+-- Policies (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' AND tablename = 'notifications' AND policyname = 'Users can view their own notifications'
+  ) THEN
+    CREATE POLICY "Users can view their own notifications"
+      ON notifications
+      FOR SELECT
+      USING (auth.uid() = recipient_id);
+  END IF;
 
-CREATE POLICY "Users can update their own notifications"
-  ON notifications
-  FOR UPDATE
-  USING (auth.uid() = recipient_id);
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' AND tablename = 'notifications' AND policyname = 'Users can update their own notifications'
+  ) THEN
+    CREATE POLICY "Users can update their own notifications"
+      ON notifications
+      FOR UPDATE
+      USING (auth.uid() = recipient_id);
+  END IF;
 
-CREATE POLICY "Authenticated users can create notifications"
-  ON notifications
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (true);
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'public' AND tablename = 'notifications' AND policyname = 'Authenticated users can create notifications'
+  ) THEN
+    CREATE POLICY "Authenticated users can create notifications"
+      ON notifications
+      FOR INSERT
+      TO authenticated
+      WITH CHECK (true);
+  END IF;
+END $$;
 
 COMMENT ON TABLE notifications IS 'User notifications';
 

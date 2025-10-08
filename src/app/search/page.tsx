@@ -50,36 +50,45 @@ function SearchPageContent() {
           difficulty,
           study_time,
           uploader_id,
-          class:classes!inner(
+          class_id,
+          classes!inner(
             id,
             title,
             code,
-            school:schools(id, name),
-            subject:subjects(id, name),
-            teacher:teachers(id, name)
+            school_id,
+            subject_id,
+            teacher_id,
+            schools(id, name),
+            subjects(id, name),
+            teachers(id, name)
           ),
-          uploader:users(id, handle, avatar_url),
-          ai_derivative:ai_derivatives(status),
+          users!uploader_id(id, handle, avatar_url),
+          ai_derivatives(status),
           files(id, mime)
         `, { count: 'exact' })
 
       // Use PostgreSQL text search instead of client-side filtering
       if (searchQuery.trim()) {
-        // Search across multiple fields using OR conditions
-        queryBuilder = queryBuilder.or(
-          `title.ilike.%${searchQuery}%,` +
-          `classes.title.ilike.%${searchQuery}%,` +
-          `classes.code.ilike.%${searchQuery}%`
-        )
+        // Search across title field - can't search nested fields with OR in Supabase
+        queryBuilder = queryBuilder.ilike('title', `%${searchQuery}%`)
       }
 
       const { data, error, count } = await queryBuilder
         .order('created_at', { ascending: false })
         .range(pageNum * RESULTS_PER_PAGE, (pageNum + 1) * RESULTS_PER_PAGE - 1)
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase query error:', error)
+        throw error
+      }
 
-      const transformedData = data || []
+      // Transform data to match expected Resource interface
+      const transformedData = (data || []).map((resource: any) => ({
+        ...resource,
+        class: resource.classes,
+        uploader: resource.users,
+        ai_derivative: resource.ai_derivatives?.[0] || null
+      }))
 
       if (pageNum === 0) {
         setResources(transformedData)

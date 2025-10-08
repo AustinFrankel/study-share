@@ -10,7 +10,11 @@
     "setup": "node scripts/setup-env.js",
     "seed": "node scripts/seed.js",
     "seed-comprehensive": "node scripts/comprehensive-seed.js",
-    "seed-brain-dump": "node scripts/seed-brain-dump.js"
+    "seed-brain-dump": "node scripts/seed-brain-dump.js",
+    "db:sql": "node study-resources/scripts/db-run-sql.js",
+    "db:sql:file": "node study-resources/scripts/db-run-sql.js --file",
+    "db:sql:stmt": "node study-resources/scripts/db-run-sql.js --sql",
+    "db:critical": "node ../scripts/run-critical-db-setup.js"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
@@ -26,12 +30,13 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "dotenv": "^17.2.2",
+    "dotenv": "^17.2.3",
     "framer-motion": "^12.23.22",
     "heic2any": "^0.0.4",
     "lucide-react": "^0.544.0",
     "marked": "^9.1.5",
     "next": "15.5.3",
+    "pg": "^8.16.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "tailwind-merge": "^3.3.1",

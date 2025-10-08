@@ -38,30 +38,44 @@ export default function GlobalDropzone() {
       // Don't process drops if we're already on the upload page
       // Let the upload wizard handle it directly
       if (window.location.pathname === '/upload') {
+        console.log('GlobalDropzone: On upload page, skipping')
         return
       }
       
       const items = Array.from(e.dataTransfer?.files || [])
-      if (items.length === 0) return
-
-      const allowed = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']
-      // HEIC conversion removed - just block HEIC files for now
-      const unsupportedFiles = items.filter(f => f.type === 'image/heic' || f.name.toLowerCase().endsWith('.heic'))
+      console.log('GlobalDropzone: Files dropped:', items.length)
       
-      if (unsupportedFiles.length > 0) {
-        alert(`HEIC format is not supported. Please convert ${unsupportedFiles.map(f => f.name).join(', ')} to JPG or PNG.`)
+      if (items.length === 0) {
+        console.log('GlobalDropzone: No files found')
         return
       }
-      
+
+      // Accept the same set as UploadWizard input accepts. If in doubt, pass through
+      // and let the UploadWizard perform any further validation.
+      const allowedMimePrefixes = ['image/', 'application/', 'text/']
+      const allowedExtensions = [/\.(pdf|doc|docx|txt|jpg|jpeg|png|gif|heic|heif)$/i]
+
       const files = items
-        .filter(f => allowed.includes(f.type))
+        .filter(f => {
+          const nameOk = allowedExtensions.some(rx => rx.test(f.name))
+          const mimeOk = allowedMimePrefixes.some(p => (f.type || '').startsWith(p))
+          return nameOk || mimeOk
+        })
         .map(file => ({ id: generateId(), file }))
+
+      console.log('GlobalDropzone: Filtered files:', files.length)
+
+      // If nothing usable, do not navigate away or show alerts
       if (files.length === 0) {
-        alert('Only PDF, PNG, and JPG files are supported.')
+        console.log('GlobalDropzone: No valid files after filtering')
         return
       }
 
+      console.log('GlobalDropzone: Setting pending files and navigating')
       setPendingFiles(files)
+      
+      // Navigate immediately - files are now stored in global singleton
+      console.log('GlobalDropzone: Navigating to /upload')
       router.push('/upload')
     }
 
@@ -97,7 +111,7 @@ export default function GlobalDropzone() {
         textAlign: 'center'
       }}>
         <div style={{ fontSize: 20, fontWeight: 600 }}>Drop files to upload</div>
-        <div style={{ opacity: 0.9, marginTop: 8 }}>PDF, PNG, JPG</div>
+        <div style={{ opacity: 0.9, marginTop: 8 }}>PDF, Images, Docs, Text</div>
       </div>
     </div>
   )
