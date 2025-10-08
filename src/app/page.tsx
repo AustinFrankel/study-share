@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useMemo } from 'react'
 import Head from 'next/head'
 import { useSearchParams } from 'next/navigation'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
@@ -12,10 +12,12 @@ import Navigation from '@/components/Navigation'
 import SearchBar from '@/components/SearchBar'
 import FacetFilters from '@/components/FacetFilters'
 import ResourceCard from '@/components/ResourceCard'
+import TestCard from '@/components/TestCard'
 import Leaderboard from '@/components/Leaderboard'
 import SetupGuide from '@/components/SetupGuide'
 import { Button } from '@/components/ui/button'
-import { TrendingUp, BookOpen, Users, Star } from 'lucide-react'
+import { TrendingUp, BookOpen, Users, Star, Calendar } from 'lucide-react'
+import { STANDARDIZED_TESTS_2025, AP_EXAMS_2025 } from '@/lib/test-dates'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,6 +32,25 @@ function HomeContent() {
   const [subjects, setSubjects] = useState<Array<{ id: string; name: string }>>([])
   const [teachers, setTeachers] = useState<Array<{ id: string; name: string }>>([])
   const [viewedResources, setViewedResources] = useState<string[]>([])
+
+  // Get upcoming tests for homepage
+  const upcomingTests = useMemo(() => {
+    const allTests = [...STANDARDIZED_TESTS_2025, ...AP_EXAMS_2025].map(test => ({
+      ...test,
+      category: test.category || (STANDARDIZED_TESTS_2025.includes(test as any) ? 'Standardized Test' : 'AP Exam')
+    }))
+
+    const now = new Date().getTime()
+    // Show next 3 upcoming tests within the next 90 days
+    return allTests
+      .filter(test => {
+        const timeDiff = test.date.getTime() - now
+        const daysDiff = timeDiff / (1000 * 60 * 60 * 24)
+        return daysDiff >= 0 && daysDiff <= 90
+      })
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, 3)
+  }, [])
 
   useEffect(() => {
     if (isSupabaseConfigured) {
@@ -338,12 +359,8 @@ function HomeContent() {
         {/* Hero Section - Mobile Optimized */}
         <div className="text-center mb-5 sm:mb-6 md:mb-8">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 sm:mb-3 px-2 leading-tight">
-            Study Resources for Your Classes
+            Study Smart for Your Classes
           </h1>
-          <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-5 max-w-2xl mx-auto px-4 leading-relaxed">
-            Find and share study guides, class notes, and past exams specific to your school, teacher, and class.
-            Access AI-powered practice questions instantly.
-          </p>
           
           {/* Search Bar - Improved Mobile Styling */}
           <div className="max-w-4xl mx-auto mb-5 sm:mb-6 px-2">
@@ -375,6 +392,26 @@ function HomeContent() {
             teachers={teachers}
           />
         </div>
+
+        {/* Upcoming Tests Banner */}
+        {upcomingTests.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4 sm:mb-5">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
+                Upcoming Tests
+              </h2>
+              <Button variant="outline" asChild size="sm" className="text-sm">
+                <a href="/live">View All</a>
+              </Button>
+            </div>
+            <div className="grid gap-4 sm:gap-5 md:grid-cols-3">
+              {upcomingTests.map((test) => (
+                <TestCard key={test.id} test={test} compact />
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-6 lg:gap-8 lg:grid-cols-3 items-start">
           {/* Recent Resources */}

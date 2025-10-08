@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 export default function Footer() {
   return (
-    <footer className="mt-16 border-t bg-indigo-50" role="contentinfo">
+    <footer className="mt-16 border-t" role="contentinfo">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid gap-8 md:grid-cols-4 text-sm">
         <div>
           <div className="flex items-center gap-2 mb-3">
@@ -48,7 +48,7 @@ export default function Footer() {
           </ul>
         </nav>
       </div>
-      <div className="border-t py-4 text-center text-xs text-gray-500 bg-indigo-50">
+      <div className="border-t py-4 text-center text-xs text-gray-500">
         <p>© {new Date().getFullYear()} Study Share. All rights reserved.</p>
       </div>
     </footer>
