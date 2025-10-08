@@ -740,16 +740,16 @@ function ProfilePageContent() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <Navigation />
       
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Profile Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-bold text-gray-900 mb-3">
             {isOwnProfile ? 'Your Profile' : `${displayUser?.handle}'s Profile`}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-lg text-gray-600">
             {isOwnProfile ? 'Track your contributions and achievements' : 'View contributions and achievements'}
           </p>
         </div>
@@ -772,8 +772,8 @@ function ProfilePageContent() {
         )}
 
         {/* Tab Navigation */}
-        <div className="mb-6 border-b border-gray-200">
-          <div className="flex space-x-8">
+        <div className="mb-8 border-b border-gray-300">
+          <div className="flex justify-center space-x-8">
             {[
               { id: 'overview', name: 'Overview', icon: UserIcon },
               { id: 'resources', name: isOwnProfile ? 'My Resources' : 'Resources', icon: BookOpen },
@@ -782,7 +782,7 @@ function ProfilePageContent() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as 'overview' | 'resources' | 'activity')}
-                className={`flex items-center gap-2 pb-4 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 pb-4 px-3 text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'text-blue-600 border-b-2 border-blue-600'
                     : 'text-gray-500 hover:text-gray-700'
@@ -795,29 +795,29 @@ function ProfilePageContent() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-          {/* Left Column - Stats and Profile - Now Wider */}
-          <div className="space-y-6">
+        <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
+          {/* Left Column - Stats and Profile - Centered and Wider */}
+          <div className="space-y-8">
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <>
                 {/* User Info Card with Username Editor on the right */}
-                <div className="grid grid-cols-1 gap-6 items-start">
-                  <Card className={isOwnProfile ? "min-h-[400px]" : ""}>
-                    <CardHeader>
-                      <CardTitle className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 gap-8 items-start">
+                  <Card className={`${isOwnProfile ? "min-h-[400px]" : ""} shadow-md rounded-xl`}>
+                    <CardHeader className="pt-8">
+                      <CardTitle className="flex flex-col gap-6">
                         <div className="flex items-center gap-3">
-                          <Avatar className={isOwnProfile ? "w-12 h-12 flex-shrink-0" : "w-10 h-10 flex-shrink-0"}>
+                          <Avatar className={isOwnProfile ? "w-16 h-16 flex-shrink-0" : "w-12 h-12 flex-shrink-0"}>
                             {displayUser?.avatar_url && (
                               <AvatarImage src={displayUser.avatar_url} alt={displayUser?.handle} />
                             )}
-                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
+                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-lg">
                               {displayUser?.handle.split('-').map((word: string) => word[0]).join('').toUpperCase().slice(0, 2)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             {!isEditingHandle ? (
-                              <h2 className={isOwnProfile ? "text-xl sm:text-2xl font-mono font-semibold break-words" : "text-lg sm:text-xl font-mono font-semibold break-words"}>{displayUser?.handle}</h2>
+                              <h2 className={isOwnProfile ? "text-2xl sm:text-3xl font-mono font-bold break-words" : "text-xl sm:text-2xl font-mono font-semibold break-words"}>{displayUser?.handle}</h2>
                             ) : (
                               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                 <Input
@@ -863,9 +863,9 @@ function ProfilePageContent() {
                         )}
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-6">
                     {isOwnProfile && (
-                      <div className="mb-4">
+                      <div className="mb-6">
                         <div className="flex items-center gap-2 flex-wrap">
                           <input
                             ref={avatarInputRef}
@@ -894,14 +894,14 @@ function ProfilePageContent() {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{stats?.totalPoints || 0}</div>
-                        <div className="text-sm text-gray-600">Total Points</div>
+                    <div className="grid grid-cols-2 gap-6 mb-6">
+                      <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 shadow-sm">
+                        <div className="text-3xl font-bold text-blue-600">{stats?.totalPoints || 0}</div>
+                        <div className="text-sm text-gray-600 font-medium mt-1">Total Points</div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">#{rank}</div>
-                        <div className="text-sm text-gray-600">Global Rank</div>
+                      <div className="text-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200 shadow-sm">
+                        <div className="text-3xl font-bold text-green-600">#{rank}</div>
+                        <div className="text-sm text-gray-600 font-medium mt-1">Global Rank</div>
                       </div>
                     </div>
 
@@ -949,57 +949,57 @@ function ProfilePageContent() {
                 </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="pt-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <Card className="shadow-md rounded-xl hover:shadow-lg transition-shadow">
+                <CardContent className="pt-8">
                   <div className="text-center">
-                    <Upload className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold">{stats?.uploadsCount || 0}</div>
-                    <div className="text-sm text-gray-600">Resources</div>
+                    <Upload className="w-10 h-10 text-blue-600 mx-auto mb-3" />
+                    <div className="text-3xl font-bold text-gray-900">{stats?.uploadsCount || 0}</div>
+                    <div className="text-sm text-gray-600 font-medium mt-1">Resources</div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent className="pt-6">
+              <Card className="shadow-md rounded-xl hover:shadow-lg transition-shadow">
+                <CardContent className="pt-8">
                   <div className="text-center">
-                    <ThumbsUp className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold">{stats?.netUpvotes || 0}</div>
-                    <div className="text-sm text-gray-600">Net Upvotes</div>
+                    <ThumbsUp className="w-10 h-10 text-green-600 mx-auto mb-3" />
+                    <div className="text-3xl font-bold text-gray-900">{stats?.netUpvotes || 0}</div>
+                    <div className="text-sm text-gray-600 font-medium mt-1">Net Upvotes</div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent className="pt-6">
+              <Card className="shadow-md rounded-xl hover:shadow-lg transition-shadow">
+                <CardContent className="pt-8">
                   <div className="text-center">
-                    <Wrench className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold">{stats?.acceptedFixes || 0}</div>
-                    <div className="text-sm text-gray-600">Fixes Accepted</div>
+                    <Wrench className="w-10 h-10 text-purple-600 mx-auto mb-3" />
+                    <div className="text-3xl font-bold text-gray-900">{stats?.acceptedFixes || 0}</div>
+                    <div className="text-sm text-gray-600 font-medium mt-1">Fixes Accepted</div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent className="pt-6">
+              <Card className="shadow-md rounded-xl hover:shadow-lg transition-shadow">
+                <CardContent className="pt-8">
                   <div className="text-center">
-                    <MessageCircle className="w-8 h-8 text-orange-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold">{stats?.helpfulComments || 0}</div>
-                    <div className="text-sm text-gray-600">Comments</div>
+                    <MessageCircle className="w-10 h-10 text-orange-600 mx-auto mb-3" />
+                    <div className="text-3xl font-bold text-gray-900">{stats?.helpfulComments || 0}</div>
+                    <div className="text-sm text-gray-600 font-medium mt-1">Comments</div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
             {/* Badges */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-yellow-500" />
+            <Card className="shadow-md rounded-xl">
+              <CardHeader className="pt-8">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Trophy className="w-6 h-6 text-yellow-500" />
                   Badges ({stats?.badges.length || 0})
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-4">
                 {stats?.badges && stats.badges.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {stats.badges.map((badge) => (
@@ -1027,14 +1027,14 @@ function ProfilePageContent() {
 
             {/* Next Badge Progress */}
             {nextBadge && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Star className="w-5 h-5 text-blue-500" />
+              <Card className="shadow-md rounded-xl">
+                <CardHeader className="pt-8">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Star className="w-6 h-6 text-blue-500" />
                     Next Badge: {nextBadge.name}
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-4">
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>{nextBadge.current} / {nextBadge.target} {nextBadge.type}</span>
@@ -1056,14 +1056,14 @@ function ProfilePageContent() {
 
             {/* My Resources Tab */}
             {activeTab === 'resources' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="w-5 h-5 text-blue-500" />
+              <Card className="shadow-md rounded-xl">
+                <CardHeader className="pt-8">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <BookOpen className="w-6 h-6 text-blue-500" />
                     {isOwnProfile ? 'My Resources' : `${displayUser?.handle}'s Resources`} ({stats?.uploadsCount || 0})
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-4">
                   {(() => {
                     console.log('Rendering resources tab, resources count:', recentResources.length, 'resources:', recentResources)
                     return null
@@ -1208,15 +1208,15 @@ function ProfilePageContent() {
 
             {/* Activity Tab */}
             {activeTab === 'activity' && (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Activity className="w-5 h-5 text-green-500" />
+              <div className="space-y-8">
+                <Card className="shadow-md rounded-xl">
+                  <CardHeader className="pt-8">
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <Activity className="w-6 h-6 text-green-500" />
                       Recent Activity
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="pt-4">
                     {loadingActivity ? (
                       <div className="space-y-3">
                         {[...Array(5)].map((_, i) => (
@@ -1265,14 +1265,14 @@ function ProfilePageContent() {
 
                 {/* Real Statistics Only */}
                 {stats && (stats.uploadsCount > 0 || stats.netUpvotes > 0 || stats.acceptedFixes > 0 || stats.helpfulComments > 0) && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-orange-500" />
+                  <Card className="shadow-md rounded-xl">
+                    <CardHeader className="pt-8">
+                      <CardTitle className="flex items-center gap-2 text-xl">
+                        <TrendingUp className="w-6 h-6 text-orange-500" />
                         Your Statistics
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <h4 className="font-medium text-gray-900 mb-3">Contributions</h4>

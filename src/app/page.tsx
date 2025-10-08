@@ -137,28 +137,18 @@ function HomeContent() {
       const { data, error } = await supabase
         .from('resources')
         .select(`
-          id,
-          title,
-          type,
-          created_at,
-          vote_count,
-          user_vote,
-          average_rating,
-          rating_count,
-          difficulty,
-          study_time,
-          uploader_id,
-          class:classes(
+          *,
+          classes (
             id,
             title,
             code,
-            school:schools(id, name),
-            subject:subjects(id, name),
-            teacher:teachers(id, name)
+            schools (name),
+            subjects (name),
+            teachers (name)
           ),
-          uploader:users(id, handle, avatar_url),
-          ai_derivative:ai_derivatives(status),
-          files(id, mime, original_filename)
+          uploader:users(*),
+          ai_derivatives (status),
+          files(id, mime, original_filename, path, storage_path)
         `)
         .order('created_at', { ascending: false })
         .range(offset, offset + resourcesPerPage - 1)
