@@ -803,11 +803,11 @@ function ProfilePageContent() {
               <>
                 {/* User Info Card with Username Editor on the right */}
                 <div className="grid grid-cols-1 gap-6 items-start">
-                  <Card className="min-h-[400px]">
+                  <Card className={isOwnProfile ? "min-h-[400px]" : ""}>
                     <CardHeader>
                       <CardTitle className="flex flex-col gap-4">
                         <div className="flex items-center gap-3">
-                          <Avatar className="w-12 h-12 flex-shrink-0">
+                          <Avatar className={isOwnProfile ? "w-12 h-12 flex-shrink-0" : "w-10 h-10 flex-shrink-0"}>
                             {displayUser?.avatar_url && (
                               <AvatarImage src={displayUser.avatar_url} alt={displayUser?.handle} />
                             )}
@@ -817,7 +817,7 @@ function ProfilePageContent() {
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             {!isEditingHandle ? (
-                              <h2 className="text-xl sm:text-2xl font-mono font-semibold break-words">{displayUser?.handle}</h2>
+                              <h2 className={isOwnProfile ? "text-xl sm:text-2xl font-mono font-semibold break-words" : "text-lg sm:text-xl font-mono font-semibold break-words"}>{displayUser?.handle}</h2>
                             ) : (
                               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                 <Input

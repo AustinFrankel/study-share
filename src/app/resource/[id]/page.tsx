@@ -1079,36 +1079,38 @@ export default function ResourcePage() {
                   );
                 })()}
 
+                {/* Always show difficulty and time */}
+                {(resource.difficulty || resource.study_time) && (
+                  <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {resource.difficulty && (
+                      <div>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-gray-600">Difficulty</span>
+                          <span className="font-medium">{resource.difficulty}/5</span>
+                        </div>
+                        <Progress value={(Math.min(Math.max(resource.difficulty, 1), 5) / 5) * 100} />
+                      </div>
+                    )}
+                    {resource.study_time && (
+                      <div>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-gray-600">Time Required</span>
+                          <span className="font-medium">
+                            {resource.study_time >= 60 
+                              ? `${Math.floor(resource.study_time / 60)} ${Math.floor(resource.study_time / 60) === 1 ? 'hour' : 'hours'}${resource.study_time % 60 !== 0 ? ' ' + (resource.study_time % 60) + ' min' : ''}`
+                              : `${resource.study_time} min`
+                            }
+                          </span>
+                        </div>
+                        <Progress value={(Math.min(resource.study_time, 120) / 120) * 100} />
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {showOriginal && (
                   <div className="grid gap-2">
                     <h5 className="font-medium text-sm text-gray-700 mb-2">All Files:</h5>
-                    {(resource.difficulty || resource.study_time) && (
-                      <div className="mb-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {resource.difficulty && (
-                          <div>
-                            <div className="flex items-center justify-between text-xs mb-1">
-                              <span className="text-gray-600">Difficulty</span>
-                              <span className="font-medium">{resource.difficulty}/5</span>
-                            </div>
-                            <Progress value={(Math.min(Math.max(resource.difficulty, 1), 5) / 5) * 100} />
-                          </div>
-                        )}
-                        {resource.study_time && (
-                          <div>
-                            <div className="flex items-center justify-between text-xs mb-1">
-                              <span className="text-gray-600">Time Required</span>
-                              <span className="font-medium">
-                                {resource.study_time >= 60 
-                                  ? `${Math.floor(resource.study_time / 60)}h ${resource.study_time % 60}m`
-                                  : `${resource.study_time} min`
-                                }
-                              </span>
-                            </div>
-                            <Progress value={(Math.min(resource.study_time, 120) / 120) * 100} />
-                          </div>
-                        )}
-                      </div>
-                    )}
                     {resource.files.map((file) => (
                       <div key={file.id} className="bg-gray-50 rounded-lg">
                         <div className="flex items-center justify-between p-3 hover:bg-gray-100 transition-colors">

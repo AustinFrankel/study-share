@@ -360,8 +360,8 @@ export default function ResourceCard({
             {typeof resource.study_time === 'number' && (
               <span className="whitespace-nowrap">
                 {resource.study_time >= 60 
-                  ? `${Math.floor(resource.study_time / 60)}h ${resource.study_time % 60 === 0 ? '' : ' ' + (resource.study_time % 60) + 'm'}`
-                  : `${resource.study_time}min`
+                  ? `${Math.floor(resource.study_time / 60)} ${Math.floor(resource.study_time / 60) === 1 ? 'hour' : 'hours'}${resource.study_time % 60 !== 0 ? ' ' + (resource.study_time % 60) + ' min' : ''}`
+                  : `${resource.study_time} min`
                 }
               </span>
             )}

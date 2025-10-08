@@ -32,6 +32,9 @@ function HomeContent() {
   const [subjects, setSubjects] = useState<Array<{ id: string; name: string }>>([])
   const [teachers, setTeachers] = useState<Array<{ id: string; name: string }>>([])
   const [viewedResources, setViewedResources] = useState<string[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalResources, setTotalResources] = useState(0)
+  const resourcesPerPage = 6
 
   // Get upcoming tests for homepage
   const upcomingTests = useMemo(() => {
@@ -75,7 +78,7 @@ function HomeContent() {
     } else {
       setLoading(false)
     }
-  }, [])
+  }, [currentPage])
 
   // Force refresh when coming from upload (refresh param in URL)
   useEffect(() => {
@@ -117,6 +120,19 @@ function HomeContent() {
         setLoading(false)
         return
       }
+      
+      // Calculate offset for pagination
+      const offset = (currentPage - 1) * resourcesPerPage
+      
+      // Get total count for pagination
+      const { count } = await supabase
+        .from('resources')
+        .select('*', { count: 'exact', head: true })
+      
+      if (count !== null) {
+        setTotalResources(count)
+      }
+      
       // Primary query with relations
       const { data, error } = await supabase
         .from('resources')
@@ -145,7 +161,7 @@ function HomeContent() {
           files(id, mime, original_filename)
         `)
         .order('created_at', { ascending: false })
-        .limit(20)
+        .range(offset, offset + resourcesPerPage - 1)
 
       if (error) {
         // If complex join fails (e.g., missing FKs/tables), try a minimal fallback query
@@ -154,7 +170,7 @@ function HomeContent() {
           .from('resources')
           .select('id,title,type,created_at')
           .order('created_at', { ascending: false })
-          .limit(20)
+          .range(offset, offset + resourcesPerPage - 1)
         if (fbErr) {
           if (fbErr.message.includes('does not exist') || fbErr.message.includes('schema cache')) {
             console.log('Database tables not set up yet. Please run the migrations first.')
@@ -453,21 +469,76 @@ function HomeContent() {
                 ))}
               </div>
             ) : resources.length > 0 ? (
-              <div className="grid gap-4 sm:gap-5 md:grid-cols-3">
-                {resources.slice(0, 6).map((resource) => (
-                  <ResourceCard
-                    key={resource.id}
-                    resource={resource}
-                    onVote={handleVote}
-                    blurredPreview={!user || (user?.id !== resource.uploader?.id && !viewedResources.includes(resource.id))}
-                    isHomepageCard={true}
-                    hasBeenViewed={!!user && viewedResources.includes(resource.id)}
-                    onDelete={handleDelete}
-                    showDeleteOption={true}
-                    currentUserId={user?.id}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid gap-4 sm:gap-5 md:grid-cols-3">
+                  {resources.map((resource) => (
+                    <ResourceCard
+                      key={resource.id}
+                      resource={resource}
+                      onVote={handleVote}
+                      blurredPreview={!user || (user?.id !== resource.uploader?.id && !viewedResources.includes(resource.id))}
+                      isHomepageCard={true}
+                      hasBeenViewed={!!user && viewedResources.includes(resource.id)}
+                      onDelete={handleDelete}
+                      showDeleteOption={true}
+                      currentUserId={user?.id}
+                    />
+                  ))}
+                </div>
+                
+                {/* Pagination */}
+                {totalResources > resourcesPerPage && (
+                  <div className="flex justify-center items-center gap-2 mt-6">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    
+                    <div className="flex gap-1">
+                      {Array.from({ length: Math.ceil(totalResources / resourcesPerPage) }, (_, i) => i + 1)
+                        .filter(page => {
+                          // Show first page, last page, current page, and pages around current
+                          const totalPages = Math.ceil(totalResources / resourcesPerPage)
+                          return page === 1 || 
+                                 page === totalPages || 
+                                 Math.abs(page - currentPage) <= 1
+                        })
+                        .map((page, index, array) => {
+                          // Add ellipsis between non-consecutive pages
+                          const prevPage = array[index - 1]
+                          const showEllipsis = prevPage && page - prevPage > 1
+                          
+                          return (
+                            <div key={page} className="flex items-center gap-1">
+                              {showEllipsis && <span className="px-2 text-gray-400">...</span>}
+                              <Button
+                                variant={currentPage === page ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setCurrentPage(page)}
+                                className="w-9"
+                              >
+                                {page}
+                              </Button>
+                            </div>
+                          )
+                        })}
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalResources / resourcesPerPage), p + 1))}
+                      disabled={currentPage >= Math.ceil(totalResources / resourcesPerPage)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300 min-h-[300px] flex flex-col justify-center">
                 <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
