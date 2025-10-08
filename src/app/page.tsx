@@ -369,13 +369,13 @@ function HomeContent() {
       <main className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 md:py-8">
         {/* Hero Section - Mobile Optimized */}
         <div className="text-center mb-5 sm:mb-6 md:mb-8">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 sm:mb-3 px-2 leading-tight flex items-center justify-center gap-1 flex-wrap">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 sm:mb-3 px-2 leading-tight flex items-center justify-center gap-0.5 flex-wrap">
             <span>Study</span>
-            <span className="inline-block min-w-[160px] sm:min-w-[200px] md:min-w-[240px]">
+            <span className="inline-block min-w-[160px] sm:min-w-[200px] md:min-w-[240px] mx-0.5">
               <RotatingText 
                 texts={['Smart', 'Quickly', 'Cleverly', 'Efficiently', 'Better', 'Confidently']} 
                 rotationInterval={3000}
-                className="text-purple-600 font-extrabold"
+                className="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-600 bg-clip-text text-transparent font-extrabold"
                 staggerDuration={0.04}
               />
             </span>
@@ -433,9 +433,9 @@ function HomeContent() {
           </div>
         )}
 
-        <div className="grid gap-6 lg:gap-8 lg:grid-cols-3 items-start">
+        <div className="grid gap-6 lg:gap-8">
           {/* Recent Resources */}
-          <div className="lg:col-span-2">
+          <div>
             <div className="flex items-center justify-between mb-4 sm:mb-5">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
@@ -453,8 +453,8 @@ function HomeContent() {
                 ))}
               </div>
             ) : resources.length > 0 ? (
-              <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
-                {resources.slice(0, 4).map((resource) => (
+              <div className="grid gap-4 sm:gap-5 md:grid-cols-3">
+                {resources.slice(0, 6).map((resource) => (
                   <ResourceCard
                     key={resource.id}
                     resource={resource}
@@ -480,13 +480,6 @@ function HomeContent() {
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Leaderboard Sidebar - Hidden on mobile by default */}
-          <div className="hidden lg:block lg:col-span-1">
-            <div className="sticky top-24">
-              <Leaderboard className="min-h-[300px]" />
-            </div>
           </div>
         </div>
 

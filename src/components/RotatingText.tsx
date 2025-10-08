@@ -51,14 +51,14 @@ export default function RotatingText({
   const displayText = reverseMode ? [...splitText].reverse() : splitText
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
+    <AnimatePresence mode="sync" initial={false}>
       <motion.span
         key={currentIndex}
         className={`inline-block ${className}`}
-        initial={{ opacity: 0 }}
+        initial={{ opacity: 1 }}
         animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
+        exit={{ opacity: 1 }}
+        transition={{ duration: 0 }}
         style={{ whiteSpace: 'nowrap' }}
       >
         {displayText.map((char, index) => {
@@ -77,9 +77,9 @@ export default function RotatingText({
                 rotateX: 0
               }}
               exit={{ 
-                y: '-120%', 
+                y: '100%', 
                 opacity: 0,
-                rotateX: -20
+                rotateX: 20
               }}
               transition={{
                 duration: 0.5,

@@ -23,28 +23,28 @@ export default function Footer() {
         <nav aria-label="Product navigation">
           <div className="font-semibold mb-3 text-gray-900">Product</div>
           <ul className="space-y-2 text-gray-600">
-            <li><Link href="/browse" className="hover:text-indigo-600 transition-colors duration-200 hover:underline">Browse Resources</Link></li>
-            <li><Link href="/upload" className="hover:text-indigo-600 transition-colors duration-200 hover:underline">Upload Materials</Link></li>
-            <li><Link href="/profile" className="hover:text-indigo-600 transition-colors duration-200 hover:underline">My Profile</Link></li>
+            <li><Link href="/browse" className="hover:text-gray-900 transition-colors duration-200 hover:underline">Browse Resources</Link></li>
+            <li><Link href="/upload" className="hover:text-gray-900 transition-colors duration-200 hover:underline">Upload Materials</Link></li>
+            <li><Link href="/profile" className="hover:text-gray-900 transition-colors duration-200 hover:underline">My Profile</Link></li>
           </ul>
         </nav>
 
         <nav aria-label="Support navigation">
           <div className="font-semibold mb-3 text-gray-900">Support</div>
           <ul className="space-y-2 text-gray-600">
-            <li><Link href="/help-center" className="hover:text-indigo-600 transition-colors duration-200 hover:underline">Help Center & FAQ</Link></li>
-            <li><a href="mailto:austinhfrankel@gmail.com" className="hover:text-indigo-600 transition-colors duration-200 hover:underline">Contact Support</a></li>
-            <li><Link href="/guidelines" className="hover:text-indigo-600 transition-colors duration-200 hover:underline">Community Guidelines</Link></li>
-            <li><Link href="/honor-code" className="hover:text-indigo-600 transition-colors duration-200 hover:underline">Honor Code</Link></li>
+            <li><Link href="/help-center" className="hover:text-gray-900 transition-colors duration-200 hover:underline">Help Center & FAQ</Link></li>
+            <li><a href="mailto:austinhfrankel@gmail.com" className="hover:text-gray-900 transition-colors duration-200 hover:underline">Contact Support</a></li>
+            <li><Link href="/guidelines" className="hover:text-gray-900 transition-colors duration-200 hover:underline">Community Guidelines</Link></li>
+            <li><Link href="/honor-code" className="hover:text-gray-900 transition-colors duration-200 hover:underline">Honor Code</Link></li>
           </ul>
         </nav>
 
         <nav aria-label="Legal navigation">
           <div className="font-semibold mb-3 text-gray-900">Legal</div>
           <ul className="space-y-2 text-gray-600">
-            <li><Link href="/termsofuse" className="hover:text-indigo-600 transition-colors duration-200 hover:underline">Terms of Use</Link></li>
-            <li><Link href="/privacy" className="hover:text-indigo-600 transition-colors duration-200 hover:underline">Privacy Policy</Link></li>
-            <li><Link href="/cookies" className="hover:text-indigo-600 transition-colors duration-200 hover:underline">Cookie Policy</Link></li>
+            <li><Link href="/termsofuse" className="hover:text-gray-900 transition-colors duration-200 hover:underline">Terms of Use</Link></li>
+            <li><Link href="/privacy" className="hover:text-gray-900 transition-colors duration-200 hover:underline">Privacy Policy</Link></li>
+            <li><Link href="/cookies" className="hover:text-gray-900 transition-colors duration-200 hover:underline">Cookie Policy</Link></li>
           </ul>
         </nav>
       </div>

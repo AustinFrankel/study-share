@@ -1316,10 +1316,12 @@ function ProfilePageContent() {
             )}
           </div>
 
-          {/* Right Column - Leaderboard */}
-          <div>
-            <Leaderboard />
-          </div>
+          {/* Right Column - Leaderboard - Only show on activity tab */}
+          {activeTab === 'activity' && (
+            <div>
+              <Leaderboard />
+            </div>
+          )}
         </div>
       </main>
     </div>
@@ -1329,7 +1331,7 @@ function ProfilePageContent() {
 export default function ProfilePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
         <Navigation />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-center py-20">
