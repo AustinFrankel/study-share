@@ -252,8 +252,37 @@ function BrowseContent() {
     }
   }
 
+  const handleDelete = async (resourceId: string) => {
+    if (!user) return
+    
+    const resourceToDelete = resources.find(r => r.id === resourceId)
+    if (!resourceToDelete) return
+    
+    if (!confirm(`Are you sure you want to delete "${resourceToDelete.title}"?`)) {
+      return
+    }
+
+    try {
+      // Delete the resource
+      const { error } = await supabase
+        .from('resources')
+        .delete()
+        .eq('id', resourceId)
+        .eq('uploader_id', user.id)
+
+      if (error) throw error
+
+      // Update local state immediately
+      setResources(prev => prev.filter(r => r.id !== resourceId))
+      
+    } catch (error) {
+      console.error('Error deleting resource:', error)
+      alert('Failed to delete resource. Please try again.')
+    }
+  }
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <Navigation />
       
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -364,9 +393,13 @@ function BrowseContent() {
                 key={resource.id}
                 resource={resource}
                 onVote={handleVote}
+                onDelete={handleDelete}
                 compact={viewMode === 'list'}
                 blurredPreview={!user || (user?.id !== resource.uploader?.id && !viewedResources.includes(resource.id))}
                 hasBeenViewed={!!user && viewedResources.includes(resource.id)}
+                isHomepageCard={false}
+                showDeleteOption={true}
+                currentUserId={user?.id}
               />
             ))}
           </div>
