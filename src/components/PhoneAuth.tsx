@@ -54,17 +54,23 @@ export default function PhoneAuth() {
       return
     }
 
-    const e164Phone = getE164Phone(phone)
-    const { error: sendError } = await signInWithPhone(e164Phone)
+    try {
+      const e164Phone = getE164Phone(phone)
+      const { error: sendError } = await signInWithPhone(e164Phone)
 
-    if (sendError) {
-      setError(sendError.message || 'Failed to send code. Please try again.')
-    } else {
-      setMessage('Code sent! Check your phone.')
-      setStep('otp')
+      if (sendError) {
+        console.error('Phone auth error:', sendError)
+        setError(sendError.message || 'Unable to send code. Please check your phone number and try again.')
+      } else {
+        setMessage('Code sent! Check your phone.')
+        setStep('otp')
+      }
+    } catch (err) {
+      console.error('Network error:', err)
+      setError('Network error. Please check your connection and try again.')
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
@@ -78,15 +84,22 @@ export default function PhoneAuth() {
       return
     }
 
-    const e164Phone = getE164Phone(phone)
-    const { error: verifyError } = await verifyPhoneOtp(e164Phone, otp)
+    try {
+      const e164Phone = getE164Phone(phone)
+      const { error: verifyError } = await verifyPhoneOtp(e164Phone, otp)
 
-    if (verifyError) {
-      setError('Invalid code. Please try again.')
+      if (verifyError) {
+        console.error('Verification error:', verifyError)
+        setError('Invalid code. Please try again.')
+        setLoading(false)
+      } else {
+        setMessage('Success! Signing you in...')
+        // Auth context will handle the redirect
+      }
+    } catch (err) {
+      console.error('Network error during verification:', err)
+      setError('Network error. Please try again.')
       setLoading(false)
-    } else {
-      setMessage('Success! Signing you in...')
-      // Auth context will handle the redirect
     }
   }
 
@@ -157,7 +170,8 @@ export default function PhoneAuth() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-14 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold text-lg shadow-xl hover:shadow-2xl transition-all rounded-xl"
+            className="w-full h-14 bg-[#007AFF] hover:bg-[#0051D5] text-white font-semibold text-lg shadow-xl hover:shadow-2xl transition-all rounded-xl"
+            style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif' }}
           >
             {loading ? (
               <div className="flex items-center gap-3">
@@ -166,8 +180,8 @@ export default function PhoneAuth() {
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                 </svg>
                 <span>Send Code</span>
               </div>

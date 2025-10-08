@@ -114,9 +114,9 @@ export default function TestCard({ test, compact = false }: TestCardProps) {
   }
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+    <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
       <div className={`h-2 bg-gradient-to-r ${test.color}`} />
-      <CardContent className="p-5">
+      <CardContent className="p-5 flex-1 flex flex-col">
         <div className="flex items-start gap-3 mb-4">
           <span className="text-3xl">{test.icon}</span>
           <div className="flex-1 min-w-0">
@@ -131,16 +131,21 @@ export default function TestCard({ test, compact = false }: TestCardProps) {
         </div>
 
         <div className="bg-gray-50 rounded-lg p-3 mb-4">
-          <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
+          <div className="flex items-center gap-2 text-sm text-gray-700">
             <Calendar className="w-4 h-4 text-indigo-600" />
-            <span className="font-medium">{formatDate(test.date)}</span>
-          </div>
-          {test.time && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Clock className="w-4 h-4 text-indigo-600" />
-              <span>{test.time}</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium">{formatDate(test.date)}</span>
+              {test.time && (
+                <>
+                  <span className="text-gray-400">•</span>
+                  <span className="text-sm text-gray-600 flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-indigo-600" />
+                    {test.time}
+                  </span>
+                </>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {mounted && countdown && !isPast && (
@@ -172,7 +177,7 @@ export default function TestCard({ test, compact = false }: TestCardProps) {
 
         <Button
           asChild
-          className={`w-full ${isPast ? 'bg-green-600 hover:bg-green-700' : `bg-gradient-to-r ${test.color}`}`}
+          className={`w-full mt-auto ${isPast ? 'bg-green-600 hover:bg-green-700' : `bg-gradient-to-r ${test.color}`}`}
         >
           <Link href={isPast ? `/live/test?test=${test.id}` : '/live'}>
             {isPast ? (
