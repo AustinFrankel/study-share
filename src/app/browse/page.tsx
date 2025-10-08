@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Resource } from '@/lib/types'
 import { useAuth } from '@/contexts/AuthContext'
@@ -11,10 +11,12 @@ import Navigation from '@/components/Navigation'
 import SearchBar from '@/components/SearchBar'
 import FacetFilters from '@/components/FacetFilters'
 import ResourceCard from '@/components/ResourceCard'
+import TestCard from '@/components/TestCard'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Grid, List, TrendingUp, Clock, Loader2 } from 'lucide-react'
+import { Grid, List, TrendingUp, Clock, Loader2, Calendar } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
+import { STANDARDIZED_TESTS_2025, AP_EXAMS_2025 } from '@/lib/test-dates'
 
 function BrowseContent() {
   const { user } = useAuth()
@@ -27,6 +29,22 @@ function BrowseContent() {
   const [teachers, setTeachers] = useState<Array<{ id: string; name: string; school_id?: string }>>([])
   const [viewedResources, setViewedResources] = useState<string[]>([])
   const searchParams = useSearchParams()
+
+  // Get upcoming and recent tests to show in browse
+  const featuredTests = useMemo(() => {
+    const allTests = [...STANDARDIZED_TESTS_2025, ...AP_EXAMS_2025].map(test => ({
+      ...test,
+      category: ('category' in test ? test.category : undefined) || (STANDARDIZED_TESTS_2025.includes(test as any) ? 'Standardized Test' : 'AP Exam')
+    }))
+
+    const now = new Date().getTime()
+    // Show tests within next 60 days or past 7 days
+    return allTests.filter(test => {
+      const timeDiff = test.date.getTime() - now
+      const daysDiff = timeDiff / (1000 * 60 * 60 * 24)
+      return daysDiff >= -7 && daysDiff <= 60
+    }).sort((a, b) => a.date.getTime() - b.date.getTime()).slice(0, 6)
+  }, [])
 
   useEffect(() => {
     fetchResources()
@@ -76,7 +94,8 @@ function BrowseContent() {
           ai_derivatives (status),
           tags:resource_tags (
             tag:tags (name)
-          )
+          ),
+          files(id, mime, original_filename)
         `)
 
       const school = searchParams.get('school')
@@ -308,7 +327,30 @@ function BrowseContent() {
           </div>
         </div>
 
+        {/* Featured Tests Section */}
+        {featuredTests.length > 0 && (
+          <div className="mb-10">
+            <div className="flex items-center gap-2 mb-4">
+              <Calendar className="w-5 h-5 text-indigo-600" />
+              <h2 className="text-2xl font-bold text-gray-900">Upcoming & Recent Tests</h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-2">
+              {featuredTests.map((test) => (
+                <TestCard key={test.id} test={test} compact />
+              ))}
+            </div>
+            <div className="text-center mt-4">
+              <Button asChild variant="outline">
+                <a href="/live">View All Tests →</a>
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Resources Grid/List */}
+        <div className="mb-4">
+          <h2 className="text-2xl font-bold text-gray-900">Study Resources</h2>
+        </div>
         {loading ? (
           <div className={`grid gap-6 ${viewMode === 'grid' ? 'md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
             {[...Array(6)].map((_, i) => (

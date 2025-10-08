@@ -9,6 +9,7 @@ import { getUserAccessInfo, recordResourceView } from '@/lib/access-gate'
 import { logActivity } from '@/lib/activity'
 import { signInWithEmail, signInWithGoogle } from '@/lib/auth'
 import Navigation from '@/components/Navigation'
+import PhoneAuth from '@/components/PhoneAuth'
 import PracticeView from '@/components/PracticeView'
 import CommentThread from '@/components/CommentThread'
 import VoteButton from '@/components/VoteButton'
@@ -53,6 +54,7 @@ export default function ResourcePage() {
   const [signInEmail, setSignInEmail] = useState('')
   const [signInLoading, setSignInLoading] = useState(false)
   const [signInMessage, setSignInMessage] = useState('')
+  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email')
 
   useEffect(() => {
     if (resourceId) {
@@ -1271,34 +1273,61 @@ export default function ResourcePage() {
                 <span className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-gray-500">Or continue with email</span>
+                <span className="bg-white px-2 text-gray-500">Or continue with</span>
               </div>
             </div>
 
-            {/* Email Sign-In Form */}
-            <form onSubmit={handleSignInWithEmail} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="signin-email">Email Address</Label>
-                <Input
-                  id="signin-email"
-                  type="email"
-                  value={signInEmail}
-                  onChange={(e) => setSignInEmail(e.target.value)}
-                  placeholder="your.email@example.com"
-                  required
-                  className="h-12"
-                  disabled={signInLoading}
-                />
-              </div>
-
+            {/* Auth Method Tabs */}
+            <div className="flex gap-2">
               <Button
-                type="submit"
-                disabled={signInLoading}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 text-base font-semibold"
+                type="button"
+                variant={authMethod === 'email' ? 'default' : 'outline'}
+                onClick={() => setAuthMethod('email')}
+                className="flex-1"
               >
-                {signInLoading ? 'Sending...' : 'Send Magic Link'}
+                Email
               </Button>
-            </form>
+              <Button
+                type="button"
+                variant={authMethod === 'phone' ? 'default' : 'outline'}
+                onClick={() => setAuthMethod('phone')}
+                className="flex-1"
+              >
+                Phone
+              </Button>
+            </div>
+
+            {/* Email Sign-In Form */}
+            {authMethod === 'email' && (
+              <form onSubmit={handleSignInWithEmail} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signin-email">Email Address</Label>
+                  <Input
+                    id="signin-email"
+                    type="email"
+                    value={signInEmail}
+                    onChange={(e) => setSignInEmail(e.target.value)}
+                    placeholder="your.email@example.com"
+                    required
+                    className="h-12"
+                    disabled={signInLoading}
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={signInLoading}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 text-base font-semibold"
+                >
+                  {signInLoading ? 'Sending...' : 'Send Magic Link'}
+                </Button>
+              </form>
+            )}
+
+            {/* Phone Sign-In Component */}
+            {authMethod === 'phone' && (
+              <PhoneAuth />
+            )}
 
             {signInMessage && (
               <Alert className={signInMessage.includes('Check your email') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}>

@@ -10,9 +10,9 @@ const hasValidCredentials =
   !!supabaseUrl &&
   !!supabaseAnonKey &&
   supabaseUrl.startsWith('https://') &&
-  supabaseUrl.includes('.supabase.co') &&
+  (supabaseUrl.includes('.supabase.co') || supabaseUrl.includes('studyshare')) && // Allow production domain
   supabaseAnonKey.length > 20 &&
-  supabaseAnonKey.startsWith('eyJ') // JWT tokens start with eyJ
+  (supabaseAnonKey.startsWith('eyJ') || process.env.NODE_ENV === 'production') // Allow production keys
 
 // Throw error in development if config is invalid (helps catch issues early)
 if (!hasValidCredentials && typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {

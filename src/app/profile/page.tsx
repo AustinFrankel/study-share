@@ -805,9 +805,9 @@ function ProfilePageContent() {
                 <div className="grid grid-cols-1 gap-6 items-start">
                   <Card className="min-h-[400px]">
                     <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
+                      <CardTitle className="flex flex-col gap-4">
                         <div className="flex items-center gap-3">
-                          <Avatar className="w-12 h-12">
+                          <Avatar className="w-12 h-12 flex-shrink-0">
                             {displayUser?.avatar_url && (
                               <AvatarImage src={displayUser.avatar_url} alt={displayUser?.handle} />
                             )}
@@ -815,30 +815,32 @@ function ProfilePageContent() {
                               {displayUser?.handle.split('-').map((word: string) => word[0]).join('').toUpperCase().slice(0, 2)}
                             </AvatarFallback>
                           </Avatar>
-                          <div>
+                          <div className="flex-1 min-w-0">
                             {!isEditingHandle ? (
-                              <h2 className="text-2xl font-mono font-semibold break-all">{displayUser?.handle}</h2>
+                              <h2 className="text-xl sm:text-2xl font-mono font-semibold break-words">{displayUser?.handle}</h2>
                             ) : (
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                 <Input
                                   value={newHandle}
                                   onChange={(e) => setNewHandle(e.target.value)}
-                                  className="h-9 font-mono text-base w-64"
+                                  className="h-9 font-mono text-base w-full sm:w-64"
                                   placeholder="Enter new username"
                                 />
-                                <Button size="sm" onClick={saveInlineHandle} disabled={savingHandle}>
-                                  {savingHandle ? 'Saving...' : 'Save'}
-                                </Button>
-                                <Button size="sm" variant="ghost" onClick={() => setIsEditingHandle(false)} disabled={savingHandle}>Cancel</Button>
+                                <div className="flex gap-2">
+                                  <Button size="sm" onClick={saveInlineHandle} disabled={savingHandle} className="flex-1 sm:flex-none">
+                                    {savingHandle ? 'Saving...' : 'Save'}
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={() => setIsEditingHandle(false)} disabled={savingHandle} className="flex-1 sm:flex-none">Cancel</Button>
+                                </div>
                               </div>
                             )}
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-gray-600 mt-1">
                               Member since {displayUser?.created_at ? new Date(displayUser.created_at).toLocaleDateString() : 'Unknown'}
                             </p>
                           </div>
                         </div>
                         {isOwnProfile && (
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             {!isEditingHandle ? (
                               <Button
                                 variant="outline"
@@ -888,7 +890,6 @@ function ProfilePageContent() {
                               Remove
                             </Button>
                           )}
-                          <span className="text-xs text-gray-500">PNG/JPG up to 5MB</span>
                         </div>
                       </div>
                     )}

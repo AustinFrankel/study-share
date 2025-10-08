@@ -42,6 +42,24 @@ export async function signInWithGoogle() {
   return { data, error }
 }
 
+// Sign in with phone number (Twilio SMS)
+export async function signInWithPhone(phone: string) {
+  const { data, error } = await supabase.auth.signInWithOtp({
+    phone,
+  })
+  return { data, error }
+}
+
+// Verify phone OTP
+export async function verifyPhoneOtp(phone: string, token: string) {
+  const { data, error } = await supabase.auth.verifyOtp({
+    phone,
+    token,
+    type: 'sms'
+  })
+  return { data, error }
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut()
   return { error }

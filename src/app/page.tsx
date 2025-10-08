@@ -14,6 +14,7 @@ import SearchBar from '@/components/SearchBar'
 import ResourceCard from '@/components/ResourceCard'
 import Leaderboard from '@/components/Leaderboard'
 import TestCard from '@/components/TestCard'
+import RotatingText from '@/components/RotatingText'
 import { Button } from '@/components/ui/button'
 import { Calendar, Users, Star, BookOpen, Trash2, MoreVertical, TrendingUp } from 'lucide-react'
 import { STANDARDIZED_TESTS_2025, AP_EXAMS_2025, REGENTS_NY_2025 } from '@/lib/test-dates'
@@ -141,7 +142,7 @@ function HomeContent() {
           ),
           uploader:users(id, handle, avatar_url),
           ai_derivative:ai_derivatives(status),
-          files(id, mime)
+          files(id, mime, original_filename)
         `)
         .order('created_at', { ascending: false })
         .limit(20)
@@ -368,8 +369,17 @@ function HomeContent() {
       <main className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 md:py-8">
         {/* Hero Section - Mobile Optimized */}
         <div className="text-center mb-5 sm:mb-6 md:mb-8">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 sm:mb-3 px-2 leading-tight">
-            Study Smart for Your Classes
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 sm:mb-3 px-2 leading-tight flex items-center justify-center gap-2 flex-wrap">
+            <span>Study</span>
+            <span className="inline-block min-w-[160px] sm:min-w-[200px] md:min-w-[240px]">
+              <RotatingText 
+                texts={['Smart', 'Quickly', 'Cleverly', 'Efficiently', 'Better', 'Confidently']} 
+                rotationInterval={3000}
+                className="text-purple-600 font-extrabold"
+                staggerDuration={0.04}
+              />
+            </span>
+            <span>for Your Classes</span>
           </h1>
           
           {/* Search Bar - Improved Mobile Styling */}

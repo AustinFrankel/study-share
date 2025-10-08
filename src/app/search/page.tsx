@@ -10,7 +10,9 @@ import Navigation from '@/components/Navigation'
 import SearchBar from '@/components/SearchBar'
 import FacetFilters from '@/components/FacetFilters'
 import ResourceCard from '@/components/ResourceCard'
-import { Search as SearchIcon, Loader2 } from 'lucide-react'
+import TestCard from '@/components/TestCard'
+import { Search as SearchIcon, Loader2, Calendar } from 'lucide-react'
+import { STANDARDIZED_TESTS_2025, AP_EXAMS_2025 } from '@/lib/test-dates'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,6 +31,24 @@ function SearchPageContent() {
   const [viewedResources, setViewedResources] = useState<string[]>([])
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(true)
+
+  // Get all tests and filter by search query
+  const allTests = useMemo(() => {
+    return [...STANDARDIZED_TESTS_2025, ...AP_EXAMS_2025].map(test => ({
+      ...test,
+      category: ('category' in test ? test.category : undefined) || (STANDARDIZED_TESTS_2025.includes(test as any) ? 'Standardized Test' : 'AP Exam')
+    }))
+  }, [])
+
+  const matchingTests = useMemo(() => {
+    if (!query.trim()) return []
+    const searchLower = query.toLowerCase()
+    return allTests.filter(test =>
+      test.name.toLowerCase().includes(searchLower) ||
+      test.fullName.toLowerCase().includes(searchLower) ||
+      test.category?.toLowerCase().includes(searchLower)
+    )
+  }, [query, allTests])
 
   // Memoize search function to prevent recreation on every render
   const searchResources = useCallback(async (searchQuery: string, pageNum: number = 0) => {
@@ -64,7 +84,7 @@ function SearchPageContent() {
           ),
           users!uploader_id(id, handle, avatar_url),
           ai_derivatives(status),
-          files(id, mime)
+          files(id, mime, original_filename)
         `, { count: 'exact' })
 
       // Use PostgreSQL text search instead of client-side filtering
@@ -245,7 +265,7 @@ function SearchPageContent() {
           <div>
             <div className="mb-6">
               <p className="text-gray-600">
-                {loading && page === 0 ? 'Searching...' : `${resources.length} results for "${query}"`}
+                {loading && page === 0 ? 'Searching...' : `${matchingTests.length + resources.length} results for "${query}"`}
               </p>
             </div>
 
@@ -255,37 +275,63 @@ function SearchPageContent() {
                   <div key={i} className="h-64 bg-gray-200 rounded-lg animate-pulse" />
                 ))}
               </div>
-            ) : resources.length > 0 ? (
+            ) : (matchingTests.length > 0 || resources.length > 0) ? (
               <>
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {resources.map((resource) => (
-                    <ResourceCard
-                      key={resource.id}
-                      resource={resource}
-                      onVote={handleVote}
-                      blurredPreview={!user || (user?.id !== resource.uploader?.id && !viewedResources.includes(resource.id))}
-                      hasBeenViewed={!!user && viewedResources.includes(resource.id)}
-                    />
-                  ))}
-                </div>
+                {/* Live Tests Section */}
+                {matchingTests.length > 0 && (
+                  <div className="mb-8">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Calendar className="w-5 h-5 text-indigo-600" />
+                      <h2 className="text-xl font-bold text-gray-900">Live Tests</h2>
+                      <span className="text-sm text-gray-500">({matchingTests.length})</span>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {matchingTests.map((test) => (
+                        <TestCard key={test.id} test={test} compact />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                {/* Load More Button */}
-                {hasMore && (
-                  <div className="mt-8 flex justify-center">
-                    <button
-                      onClick={loadMore}
-                      disabled={loading}
-                      className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {loading ? (
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Loading...
-                        </div>
-                      ) : (
-                        'Load More'
-                      )}
-                    </button>
+                {/* Study Resources Section */}
+                {resources.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <SearchIcon className="w-5 h-5 text-indigo-600" />
+                      <h2 className="text-xl font-bold text-gray-900">Study Resources</h2>
+                      <span className="text-sm text-gray-500">({resources.length})</span>
+                    </div>
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                      {resources.map((resource) => (
+                        <ResourceCard
+                          key={resource.id}
+                          resource={resource}
+                          onVote={handleVote}
+                          blurredPreview={!user || (user?.id !== resource.uploader?.id && !viewedResources.includes(resource.id))}
+                          hasBeenViewed={!!user && viewedResources.includes(resource.id)}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Load More Button */}
+                    {hasMore && (
+                      <div className="mt-8 flex justify-center">
+                        <button
+                          onClick={loadMore}
+                          disabled={loading}
+                          className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {loading ? (
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Loading...
+                            </div>
+                          ) : (
+                            'Load More'
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </>

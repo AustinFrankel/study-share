@@ -385,19 +385,19 @@ export default function LivePage() {
           </div>
 
           <Button
-            className={`w-full bg-gradient-to-r ${test.color} hover:opacity-90 text-white font-semibold py-5 sm:py-6 text-sm sm:text-base shadow-lg hover:shadow-xl transition-colors`}
+            className={`w-full bg-gradient-to-r ${test.color} hover:opacity-90 text-white font-semibold py-5 sm:py-6 text-xs sm:text-sm md:text-base shadow-lg hover:shadow-xl transition-colors`}
             onClick={onCardClick}
             type="button"
           >
             {isPast ? (
               <>
-                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                View
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
+                <span className="truncate">View</span>
               </>
             ) : (
               <>
-                <Bell className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                Join Waitlist
+                <Bell className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
+                <span className="truncate">Join Waitlist</span>
               </>
             )}
           </Button>

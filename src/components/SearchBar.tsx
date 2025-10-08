@@ -11,7 +11,7 @@ interface SearchBarProps {
   className?: string
 }
 
-function SearchBarContent({ placeholder = "Find study guides, notes, past exams by class or teacher...", className }: SearchBarProps) {
+function SearchBarContent({ placeholder = "Search by class or teacher...", className }: SearchBarProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [query, setQuery] = useState(searchParams.get('q') || '')
@@ -51,7 +51,7 @@ export default function SearchBar(props: SearchBarProps) {
           <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
           <Input
             type="search"
-            placeholder={props.placeholder || "Find study guides, notes, past exams by class or teacher..."}
+            placeholder={props.placeholder || "Search by class or teacher..."}
             disabled
             className="pl-10 sm:pl-12 h-11 sm:h-14 text-sm sm:text-base md:text-lg rounded-xl sm:rounded-2xl border-2 border-gray-200"
             aria-label="Search for study resources"
