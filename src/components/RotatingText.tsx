@@ -67,9 +67,9 @@ export default function RotatingText({
             <motion.span
               key={`${currentIndex}-${actualIndex}`}
               initial={{ 
-                y: reverseMode ? '-100%' : '100%', 
+                y: '100%', 
                 opacity: 0,
-                rotateX: reverseMode ? -20 : 20
+                rotateX: 20
               }}
               animate={{ 
                 y: 0, 
@@ -77,9 +77,9 @@ export default function RotatingText({
                 rotateX: 0
               }}
               exit={{ 
-                y: reverseMode ? '120%' : '-120%', 
+                y: '-120%', 
                 opacity: 0,
-                rotateX: reverseMode ? 20 : -20
+                rotateX: -20
               }}
               transition={{
                 duration: 0.5,

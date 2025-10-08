@@ -105,11 +105,8 @@ export default function TypeWriter({
         : deletingSpeed
 
       const timeout = setTimeout(() => {
-        if (reverseMode) {
-          setDisplayText((prev) => prev.slice(1))
-        } else {
-          setDisplayText((prev) => prev.slice(0, -1))
-        }
+        // For reverse mode, remove from start; for normal mode, remove from end
+        setDisplayText((prev) => reverseMode ? prev.slice(1) : prev.slice(0, -1))
       }, speed)
 
       return () => clearTimeout(timeout)
@@ -131,9 +128,12 @@ export default function TypeWriter({
 
     const timeout = setTimeout(() => {
       if (reverseMode) {
-        const remainingText = currentText.slice(displayText.length)
-        setDisplayText(remainingText[remainingText.length - 1] + displayText)
+        // For reverse mode: build from the end, prepending characters
+        const charsTyped = displayText.length
+        const nextChar = currentText[currentText.length - 1 - charsTyped]
+        setDisplayText(nextChar + displayText)
       } else {
+        // Normal mode: build from start, appending characters
         setDisplayText(currentText.slice(0, displayText.length + 1))
       }
     }, displayText === '' ? initialDelay : speed)

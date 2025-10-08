@@ -369,7 +369,7 @@ function HomeContent() {
       <main className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 md:py-8">
         {/* Hero Section - Mobile Optimized */}
         <div className="text-center mb-5 sm:mb-6 md:mb-8">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 sm:mb-3 px-2 leading-tight flex items-center justify-center gap-2 flex-wrap">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 sm:mb-3 px-2 leading-tight flex items-center justify-center gap-1 flex-wrap">
             <span>Study</span>
             <span className="inline-block min-w-[160px] sm:min-w-[200px] md:min-w-[240px]">
               <RotatingText 
