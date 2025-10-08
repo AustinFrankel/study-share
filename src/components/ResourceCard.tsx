@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ArrowUp, ArrowDown, MessageCircle, Clock, User, GraduationCap, BookOpen, FileImage, Image as ImageIcon, MoreVertical, Trash2, Lock } from 'lucide-react'
+import { ArrowUp, ArrowDown, MessageCircle, Clock, User, GraduationCap, BookOpen, FileImage, Image as ImageIcon, MoreVertical, Trash2, Lock, Eye } from 'lucide-react'
 import StarRating from '@/components/StarRating'
 import { Resource } from '@/lib/types'
 import { formatDistanceToNow } from 'date-fns'
@@ -118,6 +118,12 @@ export default function ResourceCard({
   const handleRate = async (rating: number) => {
     if (!currentUserId) {
       showToast('Please sign in to rate resources', 'info')
+      return
+    }
+
+    // Prevent self-rating
+    if (resource.uploader_id === currentUserId) {
+      showToast('You cannot rate your own resource', 'info')
       return
     }
 
@@ -407,12 +413,10 @@ export default function ResourceCard({
               <Clock className="w-4 h-4 flex-shrink-0" />
               <span className="text-xs">{formatDistanceToNow(new Date(resource.created_at), { addSuffix: true })}</span>
             </div>
-            {resource.files && resource.files.length > 0 && (
-              <span className="flex items-center gap-1 text-xs">
-                {firstImageFile ? <ImageIcon className="w-3 h-3" /> : <FileImage className="w-3 h-3" />}
-                {resource.files.length}
-              </span>
-            )}
+            <span className="flex items-center gap-1 text-xs text-gray-600">
+              <Eye className="w-3 h-3" />
+              {resource.view_count || 0}
+            </span>
           </div>
 
           {/* Buttons row */}

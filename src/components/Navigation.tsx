@@ -225,15 +225,12 @@ export default function Navigation() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setAuthTab('phone')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md font-medium transition-all ${
-                          authTab === 'phone'
-                            ? 'bg-white text-green-600 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                        }`}
+                        disabled
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md font-medium transition-all opacity-50 cursor-not-allowed text-gray-400"
+                        title="SMS authentication is not currently available"
                       >
                         <Smartphone className="w-4 h-4" />
-                        <span>SMS</span>
+                        <span>SMS (Soon)</span>
                       </button>
                     </div>
 
@@ -300,13 +297,6 @@ export default function Navigation() {
                           </p>
                         )}
                       </form>
-                    )}
-
-                    {/* Phone Auth Component */}
-                    {authTab === 'phone' && (
-                      <div className="pt-2">
-                        <PhoneAuth />
-                      </div>
                     )}
                   </DialogContent>
                 </Dialog>

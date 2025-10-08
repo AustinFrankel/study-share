@@ -19,9 +19,10 @@ interface LeaderboardEntry {
 interface LeaderboardProps {
   schoolId?: string
   className?: string
+  hideTitle?: boolean
 }
 
-export default function Leaderboard({ schoolId, className }: LeaderboardProps) {
+export default function Leaderboard({ schoolId, className, hideTitle = false }: LeaderboardProps) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [timeframe, setTimeframe] = useState<'all' | 'week' | 'month'>('all')
@@ -85,24 +86,26 @@ export default function Leaderboard({ schoolId, className }: LeaderboardProps) {
 
   return (
     <Card className={className}>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-yellow-500" />
-            Leaderboard
-          </CardTitle>
-          <Badge variant="outline" className="flex items-center gap-1">
-            {scope === 'global' ? (
-              <Globe className="w-3 h-3" />
-            ) : (
-              <TrendingUp className="w-3 h-3" />
-            )}
-            {scope === 'global' ? 'Global' : 'School'}
-          </Badge>
-        </div>
-      </CardHeader>
+      {!hideTitle && (
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-yellow-500" />
+              Leaderboard
+            </CardTitle>
+            <Badge variant="outline" className="flex items-center gap-1">
+              {scope === 'global' ? (
+                <Globe className="w-3 h-3" />
+              ) : (
+                <TrendingUp className="w-3 h-3" />
+              )}
+              {scope === 'global' ? 'Global' : 'School'}
+            </Badge>
+          </div>
+        </CardHeader>
+      )}
 
-      <CardContent className="space-y-4">
+      <CardContent className={`space-y-4 ${hideTitle ? 'pt-0' : ''}`}>
         {/* Controls */}
         <div className="flex flex-wrap gap-2">
           <div className="flex gap-1">

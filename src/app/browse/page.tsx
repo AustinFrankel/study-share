@@ -30,6 +30,11 @@ function BrowseContent() {
   const [viewedResources, setViewedResources] = useState<string[]>([])
   const searchParams = useSearchParams()
 
+  // NEW: Pagination state for Browse ("page shuffler")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalResources, setTotalResources] = useState(0)
+  const resourcesPerPage = 12
+
   // Get upcoming and recent tests to show in browse
   const featuredTests = useMemo(() => {
     const allTests = [...STANDARDIZED_TESTS_2025, ...AP_EXAMS_2025].map(test => ({
@@ -49,6 +54,11 @@ function BrowseContent() {
   useEffect(() => {
     fetchResources()
     fetchFilterOptions()
+  }, [searchParams, sortBy, currentPage])
+
+  // Reset to page 1 when filters or sort change
+  useEffect(() => {
+    setCurrentPage(1)
   }, [searchParams, sortBy])
 
   useEffect(() => {
@@ -76,9 +86,40 @@ function BrowseContent() {
     }
   }
 
+  const applyFilters = (query: any) => {
+    let q = query
+    const school = searchParams.get('school')
+    if (school) q = q.eq('classes.school_id', school)
+    const subject = searchParams.get('subject')
+    if (subject) q = q.eq('classes.subject_id', subject)
+    const teacher = searchParams.get('teacher')
+    if (teacher) q = q.eq('classes.teacher_id', teacher)
+    const type = searchParams.get('type')
+    if (type) q = q.eq('type', type)
+    return q
+  }
+
   const fetchResources = async () => {
     try {
-      let query = supabase
+      setLoading(true)
+
+      // Calculate offset for pagination
+      const offset = (currentPage - 1) * resourcesPerPage
+
+      // Count query with filters
+      let countQuery = supabase
+        .from('resources')
+        .select('*', { count: 'exact', head: true })
+
+      // Apply same filters for count
+      countQuery = applyFilters(countQuery)
+
+      // Sorting doesn't affect count
+      const { count } = await countQuery
+      setTotalResources(count || 0)
+
+      // Primary data query with relations
+      let dataQuery = supabase
         .from('resources')
         .select(`
           *,
@@ -98,35 +139,20 @@ function BrowseContent() {
           files(id, mime, original_filename)
         `)
 
-      const school = searchParams.get('school')
-      if (school) {
-        query = query.eq('classes.school_id', school)
-      }
-
-      const subject = searchParams.get('subject')
-      if (subject) {
-        query = query.eq('classes.subject_id', subject)
-      }
-
-      const teacher = searchParams.get('teacher')
-      if (teacher) {
-        query = query.eq('classes.teacher_id', teacher)
-      }
-
-      const type = searchParams.get('type')
-      if (type) {
-        query = query.eq('type', type)
-      }
+      // Apply filters
+      dataQuery = applyFilters(dataQuery)
 
       // Apply sorting
       if (sortBy === 'popular') {
-        query = query.order('upvotes', { ascending: false }).order('created_at', { ascending: false })
+        dataQuery = dataQuery.order('upvotes', { ascending: false }).order('created_at', { ascending: false })
       } else {
-        query = query.order('created_at', { ascending: false })
+        dataQuery = dataQuery.order('created_at', { ascending: false })
       }
 
-      const { data, error } = await query.limit(50)
+      // Apply range for pagination
+      dataQuery = dataQuery.range(offset, offset + resourcesPerPage - 1)
 
+      const { data, error } = await dataQuery
       if (error) throw error
 
       const transformedData = data?.map((resource: any) => ({
@@ -308,7 +334,7 @@ function BrowseContent() {
         {/* View Controls and Sorting */}
         <div className="flex items-center justify-between mb-6">
           <div className="text-sm text-gray-600">
-            {loading ? 'Loading...' : `${resources.length} resources found`}
+            {loading ? 'Loading...' : `${totalResources} resources found`}
           </div>
           
           <div className="flex items-center gap-4">
@@ -381,28 +407,81 @@ function BrowseContent() {
           <h2 className="text-2xl font-bold text-gray-900">Study Resources</h2>
         </div>
         {loading ? (
-          <div className={`grid gap-6 ${viewMode === 'grid' ? 'md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-            {[...Array(6)].map((_, i) => (
+          <div className={`${viewMode === 'grid' ? 'grid gap-6 md:grid-cols-2 lg:grid-cols-3' : 'grid grid-cols-1 gap-6'}`}>
+            {[...Array(resourcesPerPage)].map((_, i) => (
               <div key={i} className="h-64 bg-gray-200 rounded-lg animate-pulse" />
             ))}
           </div>
         ) : resources.length > 0 ? (
-          <div className={`grid gap-6 ${viewMode === 'grid' ? 'md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-            {resources.map((resource) => (
-              <ResourceCard
-                key={resource.id}
-                resource={resource}
-                onVote={handleVote}
-                onDelete={handleDelete}
-                compact={viewMode === 'list'}
-                blurredPreview={!user || (user?.id !== resource.uploader?.id && !viewedResources.includes(resource.id))}
-                hasBeenViewed={!!user && viewedResources.includes(resource.id)}
-                isHomepageCard={false}
-                showDeleteOption={true}
-                currentUserId={user?.id}
-              />
-            ))}
-          </div>
+          <>
+            <div className={`${viewMode === 'grid' ? 'grid gap-6 md:grid-cols-2 lg:grid-cols-3' : 'grid grid-cols-1 gap-6'}`}>
+              {resources.map((resource) => (
+                <ResourceCard
+                  key={resource.id}
+                  resource={resource}
+                  onVote={handleVote}
+                  onDelete={handleDelete}
+                  compact={viewMode === 'list'}
+                  blurredPreview={!user || (user?.id !== resource.uploader?.id && !viewedResources.includes(resource.id))}
+                  hasBeenViewed={!!user && viewedResources.includes(resource.id)}
+                  isHomepageCard={false}
+                  showDeleteOption={true}
+                  currentUserId={user?.id}
+                />
+              ))}
+            </div>
+
+            {/* Pagination (Page Shuffler) */}
+            {totalResources > resourcesPerPage && (
+              <div className="flex justify-center items-center gap-2 mt-8">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                
+                <div className="flex gap-1">
+                  {Array.from({ length: Math.ceil(totalResources / resourcesPerPage) }, (_, i) => i + 1)
+                    .filter(page => {
+                      const totalPages = Math.ceil(totalResources / resourcesPerPage)
+                      return page === 1 || 
+                             page === totalPages || 
+                             Math.abs(page - currentPage) <= 1
+                    })
+                    .map((page, index, array) => {
+                      const prevPage = array[index - 1]
+                      const showEllipsis = prevPage && page - prevPage > 1
+                      
+                      return (
+                        <div key={page} className="flex items-center gap-1">
+                          {showEllipsis && <span className="px-2 text-gray-400">...</span>}
+                          <Button
+                            variant={currentPage === page ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setCurrentPage(page)}
+                            className="w-9"
+                          >
+                            {page}
+                          </Button>
+                        </div>
+                      )
+                    })}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalResources / resourcesPerPage), p + 1))}
+                  disabled={currentPage >= Math.ceil(totalResources / resourcesPerPage)}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="text-center py-12">
             <div className="text-gray-500 text-lg mb-4">No resources found</div>

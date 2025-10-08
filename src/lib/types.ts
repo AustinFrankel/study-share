@@ -54,6 +54,8 @@ export interface Resource {
   // Study metadata
   difficulty?: number // 1-5
   study_time?: number // minutes
+  // View tracking
+  view_count?: number
   class?: Class
   uploader?: User
   files?: File[]

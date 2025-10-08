@@ -168,6 +168,15 @@ export default function ResourcePage() {
 
       if (error) throw error
 
+      // Increment view count (fire and forget)
+      if (user) {
+        supabase
+          .rpc('increment_view_count', { resource_id: resourceId })
+          .then(({ error }: { error: unknown }) => {
+            if (error) console.warn('Failed to increment view count:', error)
+          })
+      }
+
       // Transform tags and get vote counts
       const transformedResource = {
         ...data,
@@ -403,6 +412,12 @@ export default function ResourcePage() {
   const handleRate = async (rating: number) => {
     if (!user || ratingLoading) return
 
+    // Prevent self-rating
+    if (resource && resource.uploader_id === user.id) {
+      showNotification('You cannot rate your own resource', 'error')
+      return
+    }
+
     setRatingLoading(true)
     try {
       if (!isSupabaseConfigured) {
@@ -410,17 +425,17 @@ export default function ResourcePage() {
         setResource(prev => prev ? { ...prev, user_rating: rating } as Resource & { user_rating?: number } : prev)
         showNotification(`⭐ Rated ${rating} stars!`, 'success')
       } else {
-        // Upsert ensures rating is saved/updated in one call
+        // Upsert ensures rating is saved/updated in one call (use rater_id to match ResourceCard)
         const { error: upsertError } = await supabase
           .from('resource_ratings')
           .upsert(
             {
               resource_id: resourceId,
-              user_id: user.id,
+              rater_id: user.id,
               rating,
               updated_at: new Date().toISOString()
             },
-            { onConflict: 'resource_id,user_id' }
+            { onConflict: 'resource_id,rater_id' }
           )
         if (upsertError) throw upsertError
         
@@ -747,7 +762,7 @@ export default function ResourcePage() {
   // For unauthenticated users, show the content with a modal overlay
   const showSignInModal = accessBlocked && !user
 
-  if (error || !resource) {
+  if (error || (!resource && !loading)) {
     return (
       <div className="min-h-screen">
         <Navigation />
@@ -755,12 +770,22 @@ export default function ResourcePage() {
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              {error || 'Resource not found'}
+              {error || 'This resource could not be found. It may have been deleted or made private.'}
             </AlertDescription>
           </Alert>
+          <div className="mt-6">
+            <Button onClick={() => router.push('/')} variant="outline">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Go Back Home
+            </Button>
+          </div>
         </main>
       </div>
     )
+  }
+
+  if (!resource) {
+    return null // Loading state is handled above
   }
 
   const aiDerivative = resource.ai_derivative as AiDerivative
@@ -1245,8 +1270,13 @@ export default function ResourcePage() {
       </main>
 
       {/* Sign-In Modal for Unauthenticated Users */}
-      <Dialog open={showSignInModal} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+      <Dialog open={showSignInModal} onOpenChange={(open) => {
+        if (!open) {
+          // If user clicks X or tries to close, navigate to home
+          window.location.href = '/'
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-center">Sign In Required</DialogTitle>
             <DialogDescription className="text-center">
@@ -1291,11 +1321,12 @@ export default function ResourcePage() {
               </Button>
               <Button
                 type="button"
-                variant={authMethod === 'phone' ? 'default' : 'outline'}
-                onClick={() => setAuthMethod('phone')}
-                className="flex-1"
+                variant="outline"
+                disabled
+                className="flex-1 opacity-50 cursor-not-allowed"
+                title="Phone authentication is not currently available"
               >
-                Phone
+                Phone (Coming Soon)
               </Button>
             </div>
 
@@ -1324,11 +1355,6 @@ export default function ResourcePage() {
                   {signInLoading ? 'Sending...' : 'Send Magic Link'}
                 </Button>
               </form>
-            )}
-
-            {/* Phone Sign-In Component */}
-            {authMethod === 'phone' && (
-              <PhoneAuth />
             )}
 
             {signInMessage && (

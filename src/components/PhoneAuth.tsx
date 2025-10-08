@@ -56,11 +56,17 @@ export default function PhoneAuth() {
 
     try {
       const e164Phone = getE164Phone(phone)
+      console.log('Sending OTP to:', e164Phone) // Debug log
       const { error: sendError } = await signInWithPhone(e164Phone)
 
       if (sendError) {
         console.error('Phone auth error:', sendError)
-        setError(sendError.message || 'Unable to send code. Please check your phone number and try again.')
+        // Check if it's a Twilio configuration error
+        if (sendError.message?.includes('Invalid parameter') || sendError.message?.includes('60200')) {
+          setError('Phone authentication is not currently configured. Please use email sign-in instead.')
+        } else {
+          setError(sendError.message || 'Unable to send code. Please check your phone number and try again.')
+        }
       } else {
         setMessage('Code sent! Check your phone.')
         setStep('otp')
