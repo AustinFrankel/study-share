@@ -79,6 +79,10 @@ function ProfilePageContent() {
   const [newHandle, setNewHandle] = useState('')
   const [savingHandle, setSavingHandle] = useState(false)
 
+  // Resources tab pagination
+  const [resourcesPage, setResourcesPage] = useState(1)
+  const resourcesPerPage = 10
+
   // Determine if viewing own profile or another user's profile
   const isOwnProfile = !targetUserHandle || (user && user.handle === targetUserHandle)
   const displayUser = isOwnProfile ? user : targetUser
@@ -576,23 +580,104 @@ function ProfilePageContent() {
     }
   }
 
-  // New: inline save handle
+  // New: inline save handle with validation
   const saveInlineHandle = async () => {
     if (!user || !newHandle.trim()) {
       setIsEditingHandle(false)
       return
     }
+    
+    const trimmed = newHandle.trim()
+    
+    // Username validation
+    if (trimmed.length < 4) {
+      setError('Username must be at least 4 characters long')
+      setTimeout(() => setError(''), 3000)
+      return
+    }
+    
+    if (trimmed.length > 20) {
+      setError('Username must be 20 characters or less')
+      setTimeout(() => setError(''), 3000)
+      return
+    }
+    
+    // Check for invalid characters (only allow alphanumeric, hyphens, underscores)
+    if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) {
+      setError('Username can only contain letters, numbers, hyphens, and underscores')
+      setTimeout(() => setError(''), 3000)
+      return
+    }
+    
     setSavingHandle(true)
     try {
-      const trimmed = newHandle.trim()
+      // Check if username already exists
+      const { data: existingUsers, error: checkError } = await supabase
+        .from('users')
+        .select('id, handle')
+        .eq('handle', trimmed)
+        .neq('id', user.id)
+      
+      if (checkError) {
+        console.error('Error checking username:', checkError)
+        throw checkError
+      }
+      
+      if (existingUsers && existingUsers.length > 0) {
+        // Username exists, suggest alternatives
+        const suggestions: string[] = []
+        let baseHandle = trimmed
+        
+        // Generate 3 unique suggestions
+        for (let i = 1; suggestions.length < 3; i++) {
+          const suggestion = `${baseHandle}${i}`
+          const { data: check } = await supabase
+            .from('users')
+            .select('id')
+            .eq('handle', suggestion)
+            .single()
+          
+          if (!check) {
+            suggestions.push(suggestion)
+          }
+        }
+        
+        // Also try with random numbers
+        if (suggestions.length < 3) {
+          for (let i = 0; suggestions.length < 3; i++) {
+            const randomNum = Math.floor(Math.random() * 999) + 1
+            const suggestion = `${baseHandle}${randomNum}`
+            const { data: check } = await supabase
+              .from('users')
+              .select('id')
+              .eq('handle', suggestion)
+              .single()
+            
+            if (!check && !suggestions.includes(suggestion)) {
+              suggestions.push(suggestion)
+            }
+          }
+        }
+        
+        setError(`This username already exists. Try: ${suggestions.join(', ')}`)
+        setTimeout(() => setError(''), 5000)
+        return
+      }
+      
       const { error } = await supabase.from('users').update({ handle: trimmed }).eq('id', user.id)
-      if (error) throw error
+      if (error) {
+        console.error('Supabase update error:', error)
+        throw error
+      }
       await refreshUser()
       setIsEditingHandle(false)
+      setError('Username updated successfully!')
+      setTimeout(() => setError(''), 2500)
     } catch (err) {
       console.error('Failed to update handle:', err)
-      setError('Failed to update username')
-      setTimeout(() => setError(''), 2500)
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
+      setError(`Failed to update username: ${errorMessage}`)
+      setTimeout(() => setError(''), 3000)
     } finally {
       setSavingHandle(false)
     }
@@ -795,18 +880,18 @@ function ProfilePageContent() {
           </div>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
-          {/* Left Column - Stats and Profile - Centered and Wider */}
+        <div className="grid gap-8 lg:grid-cols-1 max-w-4xl mx-auto">
+          {/* Main Content - Centered */}
           <div className="space-y-8">
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <>
                 {/* User Info Card with Username Editor on the right */}
                 <div className="grid grid-cols-1 gap-8 items-start">
-                  <Card className={`${isOwnProfile ? "min-h-[400px]" : ""} shadow-md rounded-xl`}>
+                  <Card className={`${isOwnProfile ? "min-h-[350px]" : ""} shadow-md rounded-xl`}>
                     <CardHeader className="pt-8">
                       <CardTitle className="flex flex-col gap-6">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 justify-center">
                           <Avatar className={isOwnProfile ? "w-16 h-16 flex-shrink-0" : "w-12 h-12 flex-shrink-0"}>
                             {displayUser?.avatar_url && (
                               <AvatarImage src={displayUser.avatar_url} alt={displayUser?.handle} />
@@ -815,16 +900,17 @@ function ProfilePageContent() {
                               {displayUser?.handle.split('-').map((word: string) => word[0]).join('').toUpperCase().slice(0, 2)}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 text-center">
                             {!isEditingHandle ? (
                               <h2 className={isOwnProfile ? "text-2xl sm:text-3xl font-mono font-bold break-words" : "text-xl sm:text-2xl font-mono font-semibold break-words"}>{displayUser?.handle}</h2>
                             ) : (
-                              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                              <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
                                 <Input
                                   value={newHandle}
                                   onChange={(e) => setNewHandle(e.target.value)}
                                   className="h-9 font-mono text-base w-full sm:w-64"
                                   placeholder="Enter new username"
+                                  maxLength={20}
                                 />
                                 <div className="flex gap-2">
                                   <Button size="sm" onClick={saveInlineHandle} disabled={savingHandle} className="flex-1 sm:flex-none">
@@ -840,14 +926,14 @@ function ProfilePageContent() {
                           </div>
                         </div>
                         {isOwnProfile && (
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex flex-wrap items-center justify-center gap-2">
                             {!isEditingHandle ? (
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => { setIsEditingHandle(true); setNewHandle(displayUser?.handle || '') }}
                               >
-                                Edit
+                                Edit Username
                               </Button>
                             ) : null}
                             <Button
@@ -857,7 +943,7 @@ function ProfilePageContent() {
                               disabled={regeneratingHandle}
                             >
                               <Shuffle className="w-4 h-4 mr-2" />
-                              {regeneratingHandle ? 'Generating...' : 'New Handle'}
+                              {regeneratingHandle ? 'Generating...' : 'Random Username'}
                             </Button>
                           </div>
                         )}
@@ -866,7 +952,7 @@ function ProfilePageContent() {
                     <CardContent className="pt-6">
                     {isOwnProfile && (
                       <div className="mb-6">
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center justify-center gap-2 flex-wrap">
                           <input
                             ref={avatarInputRef}
                             id="avatar-upload-input"
@@ -876,8 +962,8 @@ function ProfilePageContent() {
                             onChange={handleAvatarFileChange}
                           />
                           <Button asChild size="sm" variant="outline" disabled={avatarUploading}>
-                            <label htmlFor="avatar-upload-input">
-                              {avatarUploading ? 'Uploading...' : 'Change photo'}
+                            <label htmlFor="avatar-upload-input" className="cursor-pointer">
+                              {avatarUploading ? 'Uploading...' : 'Change Photo'}
                             </label>
                           </Button>
                           {user?.avatar_url && (
@@ -887,27 +973,16 @@ function ProfilePageContent() {
                               onClick={handleRemoveAvatar}
                               disabled={avatarUploading}
                             >
-                              Remove
+                              Remove Photo
                             </Button>
                           )}
                         </div>
                       </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-6 mb-6">
-                      <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 shadow-sm">
-                        <div className="text-3xl font-bold text-blue-600">{stats?.totalPoints || 0}</div>
-                        <div className="text-sm text-gray-600 font-medium mt-1">Total Points</div>
-                      </div>
-                      <div className="text-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200 shadow-sm">
-                        <div className="text-3xl font-bold text-green-600">#{rank}</div>
-                        <div className="text-sm text-gray-600 font-medium mt-1">Global Rank</div>
-                      </div>
-                    </div>
-
                     {isOwnProfile && accessInfo && (
-                      <div className="border-t pt-4">
-                        <h4 className="font-medium text-gray-900 mb-3">Monthly Access</h4>
+                      <div className="border-t pt-6 mb-6">
+                        <h4 className="font-medium text-gray-900 mb-3 text-center">Monthly Access</h4>
                         <div className="space-y-3">
                           <div>
                             <div className="flex justify-between text-sm mb-1">
@@ -918,7 +993,7 @@ function ProfilePageContent() {
                             </div>
                             <Progress value={(accessInfo.viewsThisMonth / accessInfo.maxViewsThisMonth) * 100} className="h-2" />
                           </div>
-                          <div className="flex flex-wrap gap-2 items-center justify-between">
+                          <div className="flex flex-wrap gap-2 items-center justify-center">
                             <div className="text-sm text-gray-600">
                               Ads watched: {accessInfo.adsWatchedThisMonth} / {ACCESS_GATE_CONFIG.MAX_ADS_PER_MONTH}
                             </div>
@@ -934,7 +1009,7 @@ function ProfilePageContent() {
                             </div>
                           </div>
                           {!accessInfo.canView && (
-                            <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                            <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded text-center">
                               ⚠️ Monthly view limit reached. Upload resources or watch ads to get more views.
                             </div>
                           )}
@@ -943,10 +1018,68 @@ function ProfilePageContent() {
                     )}
                     </CardContent>
                   </Card>
-
-                  {/* Remove separate UsernameEditor card */}
-                  {/* (Deleted) */}
                 </div>
+
+            {/* Badges - Moved Higher */}
+            <Card className="shadow-md rounded-xl">
+              <CardHeader className="pt-8">
+                <CardTitle className="flex items-center gap-2 text-xl justify-center">
+                  <Trophy className="w-6 h-6 text-yellow-500" />
+                  Badges ({stats?.badges.length || 0})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {stats?.badges && stats.badges.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {stats.badges.map((badge) => (
+                      <div
+                        key={badge.id}
+                        className="flex items-center gap-3 p-3 bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-lg"
+                      >
+                        <div className="text-2xl">{badge.icon}</div>
+                        <div>
+                          <div className="font-medium text-sm">{badge.name}</div>
+                          <div className="text-xs text-gray-600">{badge.description}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-sm">No badges earned yet</p>
+                    <p className="text-xs">Start uploading and engaging to earn badges!</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Next Badge Progress - Moved Higher */}
+            {nextBadge && (
+              <Card className="shadow-md rounded-xl">
+                <CardHeader className="pt-8">
+                  <CardTitle className="flex items-center gap-2 text-xl justify-center">
+                    <Star className="w-6 h-6 text-blue-500" />
+                    Next Badge: {nextBadge.name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>{nextBadge.current} / {nextBadge.target} {nextBadge.type}</span>
+                      <span>{Math.round((nextBadge.current / nextBadge.target) * 100)}%</span>
+                    </div>
+                    <Progress 
+                      value={(nextBadge.current / nextBadge.target) * 100} 
+                      className="w-full"
+                    />
+                    <p className="text-xs text-gray-600 text-center">
+                      {nextBadge.target - nextBadge.current} more {nextBadge.type} to unlock this badge
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -991,66 +1124,12 @@ function ProfilePageContent() {
               </Card>
             </div>
 
-            {/* Badges */}
-            <Card className="shadow-md rounded-xl">
-              <CardHeader className="pt-8">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Trophy className="w-6 h-6 text-yellow-500" />
-                  Badges ({stats?.badges.length || 0})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                {stats?.badges && stats.badges.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {stats.badges.map((badge) => (
-                      <div
-                        key={badge.id}
-                        className="flex items-center gap-3 p-3 bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-lg"
-                      >
-                        <div className="text-2xl">{badge.icon}</div>
-                        <div>
-                          <div className="font-medium text-sm">{badge.name}</div>
-                          <div className="text-xs text-gray-600">{badge.description}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-sm">No badges earned yet</p>
-                    <p className="text-xs">Start uploading and engaging to earn badges!</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Next Badge Progress */}
-            {nextBadge && (
-              <Card className="shadow-md rounded-xl">
-                <CardHeader className="pt-8">
-                  <CardTitle className="flex items-center gap-2 text-xl">
-                    <Star className="w-6 h-6 text-blue-500" />
-                    Next Badge: {nextBadge.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>{nextBadge.current} / {nextBadge.target} {nextBadge.type}</span>
-                      <span>{Math.round((nextBadge.current / nextBadge.target) * 100)}%</span>
-                    </div>
-                    <Progress 
-                      value={(nextBadge.current / nextBadge.target) * 100} 
-                      className="w-full"
-                    />
-                    <p className="text-xs text-gray-600">
-                      {nextBadge.target - nextBadge.current} more {nextBadge.type} to unlock this badge
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* View All Badges Button */}
+            <div className="text-center">
+              <Button variant="outline" asChild size="lg">
+                <a href="#badges-section">View All Badges</a>
+              </Button>
+            </div>
               </>
             )}
 
@@ -1069,8 +1148,9 @@ function ProfilePageContent() {
                     return null
                   })()}
                   {recentResources.length > 0 ? (
+                    <>
                     <div className="space-y-4">
-                      {recentResources.map((resource) => (
+                      {recentResources.slice((resourcesPage - 1) * resourcesPerPage, resourcesPage * resourcesPerPage).map((resource) => (
                         <div key={resource.id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
@@ -1189,6 +1269,39 @@ function ProfilePageContent() {
                         </div>
                       ))}
                     </div>
+                    
+                    {/* Pagination Controls */}
+                    {recentResources.length > resourcesPerPage && (
+                      <div className="flex items-center justify-center gap-2 mt-6">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={resourcesPage === 1}
+                          onClick={() => setResourcesPage(p => p - 1)}
+                        >
+                          Previous
+                        </Button>
+                        {Array.from({ length: Math.ceil(recentResources.length / resourcesPerPage) }, (_, i) => i + 1).map(pageNum => (
+                          <Button
+                            key={pageNum}
+                            variant={resourcesPage === pageNum ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setResourcesPage(pageNum)}
+                          >
+                            {pageNum}
+                          </Button>
+                        ))}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={resourcesPage >= Math.ceil(recentResources.length / resourcesPerPage)}
+                          onClick={() => setResourcesPage(p => p + 1)}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    )}
+                    </>
                   ) : (
                     <div className="text-center py-8 text-gray-500">
                       <Upload className="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -1209,6 +1322,38 @@ function ProfilePageContent() {
             {/* Activity Tab */}
             {activeTab === 'activity' && (
               <div className="space-y-8">
+                {/* Points and Rank - Moved from Overview */}
+                <Card className="shadow-md rounded-xl">
+                  <CardHeader className="pt-8">
+                    <CardTitle className="text-xl text-center">Your Stats</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 shadow-sm">
+                        <div className="text-4xl font-bold text-blue-600">{stats?.totalPoints || 0}</div>
+                        <div className="text-sm text-gray-600 font-medium mt-2">Total Points</div>
+                      </div>
+                      <div className="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200 shadow-sm">
+                        <div className="text-4xl font-bold text-green-600">#{rank}</div>
+                        <div className="text-sm text-gray-600 font-medium mt-2">Global Rank</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Leaderboard */}
+                <Card className="shadow-md rounded-xl">
+                  <CardHeader className="pt-8">
+                    <CardTitle className="flex items-center gap-2 text-xl justify-center">
+                      <Trophy className="w-6 h-6 text-yellow-500" />
+                      Leaderboard
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <Leaderboard />
+                  </CardContent>
+                </Card>
+
                 <Card className="shadow-md rounded-xl">
                   <CardHeader className="pt-8">
                     <CardTitle className="flex items-center gap-2 text-xl">
