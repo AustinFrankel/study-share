@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(cat:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git rm:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx eslint:*)",
+      "Read(//private/tmp/**)",
+      "Bash(kill:*)",
+      "Bash(sed:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

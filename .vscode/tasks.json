@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Initialize DB schema via local SQL runner",
+			"command": "cd /Users/austinfrankel/Downloads/AnswersHelp/study-resources && npm i --silent && cd /Users/austinfrankel/Downloads/AnswersHelp && node study-resources/scripts/db-run-sql.js --file study-resources/CRITICAL_DATABASE_SETUP.sql",
+			"args": [],
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}
