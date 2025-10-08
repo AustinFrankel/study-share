@@ -11,8 +11,11 @@ import { getUserViewedResources } from '@/lib/access-gate'
 import Navigation from '@/components/Navigation'
 import FacetFilters from '@/components/FacetFilters'
 import SearchBar from '@/components/SearchBar'
+import ResourceCard from '@/components/ResourceCard'
+import Leaderboard from '@/components/Leaderboard'
+import TestCard from '@/components/TestCard'
 import { Button } from '@/components/ui/button'
-import { Calendar, Users, Star, BookOpen, Trash2, MoreVertical } from 'lucide-react'
+import { Calendar, Users, Star, BookOpen, Trash2, MoreVertical, TrendingUp } from 'lucide-react'
 import { STANDARDIZED_TESTS_2025, AP_EXAMS_2025, REGENTS_NY_2025 } from '@/lib/test-dates'
 
 export const dynamic = 'force-dynamic'
@@ -31,12 +34,28 @@ function HomeContent() {
 
   // Get upcoming tests for homepage
   const upcomingTests = useMemo(() => {
-    const allTests = [...STANDARDIZED_TESTS_2025, ...AP_EXAMS_2025, ...REGENTS_NY_2025].map(test => ({
-      ...test,
-      category: test.category || (STANDARDIZED_TESTS_2025.includes(test as any) ? 'Standardized Test' : 'AP Exam')
-    }))
+    type TestItem = {
+      id: string;
+      name: string;
+      fullName: string;
+      date: Date;
+      time?: string;
+      description?: string;
+      color: string;
+      icon: string;
+      category: string;
+    }
 
-    const now = new Date().getTime()
+    const allTests: TestItem[] = [
+      // Standardized tests already have category in data; default to "Standardized Test" if missing
+      ...STANDARDIZED_TESTS_2025.map((t: any) => ({ ...t, category: t.category ?? 'Standardized Test' })),
+      // AP exams
+      ...AP_EXAMS_2025.map((t: any) => ({ ...t, category: 'AP Exam' })),
+      // NY Regents
+      ...REGENTS_NY_2025.map((t: any) => ({ ...t, category: 'Regents' })),
+    ]
+
+    const now = Date.now()
     // Show next 3 upcoming tests within the next 90 days
     return allTests
       .filter(test => {
