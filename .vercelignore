@@ -1,7 +1,10 @@
-# Ignore everything at root except deployment config and root package.json
+# Ignore everything at root by default
 *
-!.vercelignore
+
+# Keep Vercel config and root package.json
 !vercel.json
 !package.json
-# But include the app workspace
+
+# Ensure the app workspace is included (directory and all contents)
+!study-resources
 !study-resources/**
