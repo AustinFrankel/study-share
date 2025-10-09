@@ -32,6 +32,16 @@ const nextConfig: NextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
+  async rewrites() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (!supabaseUrl) return []
+    // Proxy auth/storage endpoints to Supabase so misconfigurations won't 404 on the site domain
+    const base = new URL(supabaseUrl).origin
+    return [
+      { source: '/auth/:path*', destination: `${base}/auth/:path*` },
+      { source: '/storage/:path*', destination: `${base}/storage/:path*` },
+    ]
+  },
 };
 
 export default nextConfig;
