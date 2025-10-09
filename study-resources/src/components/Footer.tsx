@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { Instagram, Linkedin, Youtube, Twitter, Music2 } from 'lucide-react'
 
 export default function Footer() {
   return (
@@ -18,6 +19,60 @@ export default function Footer() {
           <p className="text-gray-600 leading-relaxed">
             Share and discover study resources. Earn points, unlock badges, and help your class succeed together.
           </p>
+
+          {/* Social links */}
+          <div className="mt-4 flex items-center gap-3 text-gray-600">
+            <a
+              href="https://www.tiktok.com/@studysharehq?lang=en"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="TikTok"
+              className="hover:text-gray-900"
+              title="TikTok"
+            >
+              <Music2 className="w-5 h-5" />
+            </a>
+            <a
+              href="https://www.instagram.com/studysharehq/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram"
+              className="hover:text-gray-900"
+              title="Instagram"
+            >
+              <Instagram className="w-5 h-5" />
+            </a>
+            <a
+              href="https://www.linkedin.com/company/109186356/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="LinkedIn"
+              className="hover:text-gray-900"
+              title="LinkedIn"
+            >
+              <Linkedin className="w-5 h-5" />
+            </a>
+            <a
+              href="https://www.youtube.com/@StudyShareHq"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="YouTube"
+              className="hover:text-gray-900"
+              title="YouTube"
+            >
+              <Youtube className="w-5 h-5" />
+            </a>
+            <a
+              href="https://x.com/studysharehq"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="X (Twitter)"
+              className="hover:text-gray-900"
+              title="X (Twitter)"
+            >
+              <Twitter className="w-5 h-5" />
+            </a>
+          </div>
         </div>
 
         <nav aria-label="Product navigation">
@@ -25,6 +80,12 @@ export default function Footer() {
           <ul className="space-y-2 text-gray-600">
             <li><Link href="/upload" className="hover:text-gray-900 transition-colors duration-200 hover:underline">Upload Materials</Link></li>
             <li><Link href="/profile" className="hover:text-gray-900 transition-colors duration-200 hover:underline">My Profile</Link></li>
+            <li><Link href="/live" className="hover:text-gray-900 transition-colors duration-200 hover:underline">Live</Link></li>
+            <li>
+              <a href="http://localhost:3000/live/past" className="hover:text-gray-900 transition-colors duration-200 hover:underline">
+                Past tests
+              </a>
+            </li>
           </ul>
         </nav>
 
@@ -32,7 +93,7 @@ export default function Footer() {
           <div className="font-semibold mb-3 text-gray-900">Support</div>
           <ul className="space-y-2 text-gray-600">
             <li><Link href="/help-center" className="hover:text-gray-900 transition-colors duration-200 hover:underline">Help Center & FAQ</Link></li>
-            <li><a href="mailto:austinhfrankel@gmail.com" className="hover:text-gray-900 transition-colors duration-200 hover:underline">Contact Support</a></li>
+            <li><a href="mailto:studysharehq@gmail.com" className="hover:text-gray-900 transition-colors duration-200 hover:underline">Contact Support</a></li>
             <li><Link href="/guidelines" className="hover:text-gray-900 transition-colors duration-200 hover:underline">Community Guidelines</Link></li>
             <li><Link href="/honor-code" className="hover:text-gray-900 transition-colors duration-200 hover:underline">Honor Code</Link></li>
           </ul>

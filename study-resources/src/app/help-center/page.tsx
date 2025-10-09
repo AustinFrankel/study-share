@@ -38,7 +38,7 @@ export default function HelpCenterPage() {
                 </p>
               </div>
               <a
-                href="mailto:austinhfrankel@gmail.com"
+                href="mailto:studysharehq@gmail.com"
                 className="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
               >
                 <Mail className="w-4 h-4" />
@@ -176,7 +176,7 @@ export default function HelpCenterPage() {
               Can&apos;t find what you&apos;re looking for? Our support team is ready to assist you.
             </p>
             <a
-              href="mailto:austinhfrankel@gmail.com"
+              href="mailto:studysharehq@gmail.com"
               className="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
             >
               <Mail className="w-4 h-4" />
