@@ -2,7 +2,7 @@
   "name": "study-share-root",
   "private": true,
   "scripts": {
-    "vercel-build": "npm --prefix study-resources install --no-audit --no-fund && npm --prefix study-resources run build",
+    "vercel-build": "npm --prefix study-resources run build",
     "build": "npm --prefix study-resources run build",
     "dev": "npm --prefix study-resources run dev",
     "start": "npm --prefix study-resources start",
