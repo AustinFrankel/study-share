@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, isSupabaseConfigured } from './supabase'
 import { User } from './types'
 
 // Generate random handle components
@@ -20,6 +20,9 @@ export function generateRandomHandle(): string {
 }
 
 export async function signInWithEmail(email: string) {
+  if (!isSupabaseConfigured || !supabase) {
+    return { error: new Error('Authentication not configured. Please set NEXT_PUBLIC_SUPABASE_URL to your Supabase project URL (https://<project>.supabase.co) and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel → Project → Settings → Environment Variables.') }
+  }
   const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
   const { error } = await supabase.auth.signInWithOtp({
     email,
@@ -32,6 +35,9 @@ export async function signInWithEmail(email: string) {
 
 // Sign in with Google OAuth
 export async function signInWithGoogle() {
+  if (!isSupabaseConfigured || !supabase) {
+    return { error: new Error('Authentication not configured. Please set NEXT_PUBLIC_SUPABASE_URL to your Supabase project URL (https://<project>.supabase.co) and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel → Project → Settings → Environment Variables.') }
+  }
   const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
@@ -44,6 +50,9 @@ export async function signInWithGoogle() {
 
 // Sign in with phone number (Twilio SMS)
 export async function signInWithPhone(phone: string) {
+  if (!isSupabaseConfigured || !supabase) {
+    return { data: null, error: new Error('Authentication not configured. Please set NEXT_PUBLIC_SUPABASE_URL to your Supabase project URL (https://<project>.supabase.co) and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel → Project → Settings → Environment Variables.') }
+  }
   // Normalize to E.164 using simple heuristics (expects country code). Example: +14155552671
   const normalized = normalizeToE164(phone)
   const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin

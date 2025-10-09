@@ -6,17 +6,24 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 // Validate configuration (strict validation, no fallbacks)
+// NOTE: The Supabase URL must be the project URL (e.g. https://xyzcompany.supabase.co),
+//       never your site domain. Accept common Supabase domains only.
 const hasValidCredentials =
   !!supabaseUrl &&
   !!supabaseAnonKey &&
   supabaseUrl.startsWith('https://') &&
-  (supabaseUrl.includes('.supabase.co') || supabaseUrl.includes('studyshare')) && // Allow production domain
+  (supabaseUrl.includes('.supabase.co') || supabaseUrl.includes('.supabase.in')) &&
   supabaseAnonKey.length > 20 &&
   (supabaseAnonKey.startsWith('eyJ') || process.env.NODE_ENV === 'production') // Allow production keys
 
 // Throw error in development if config is invalid (helps catch issues early)
-if (!hasValidCredentials && typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-  console.error('❌ Supabase configuration is invalid or missing. Please check your environment variables.')
+if (typeof window !== 'undefined') {
+  if (!hasValidCredentials && process.env.NODE_ENV === 'development') {
+    console.error('❌ Supabase configuration is invalid or missing. Please set NEXT_PUBLIC_SUPABASE_URL to your project URL (e.g. https://<project>.supabase.co) and NEXT_PUBLIC_SUPABASE_ANON_KEY.')
+  }
+  if (supabaseUrl && /studyshare\.[a-z]+/i.test(supabaseUrl)) {
+    console.error('❌ Misconfigured NEXT_PUBLIC_SUPABASE_URL: it points to your site domain. It must be the Supabase project URL (https://<project>.supabase.co).')
+  }
 }
 
 // Create Supabase client only if we have valid credentials
