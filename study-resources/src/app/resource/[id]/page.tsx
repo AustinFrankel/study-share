@@ -1,0 +1,1423 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { Resource, Comment, AiDerivative, User, File as ResourceFile } from '@/lib/types'
+import { getUserAccessInfo, recordResourceView } from '@/lib/access-gate'
+import { logActivity } from '@/lib/activity'
+import { signInWithEmail, signInWithGoogle } from '@/lib/auth'
+import Navigation from '@/components/Navigation'
+import PhoneAuth from '@/components/PhoneAuth'
+import PracticeView from '@/components/PracticeView'
+import CommentThread from '@/components/CommentThread'
+import VoteButton from '@/components/VoteButton'
+import FlagButton from '@/components/FlagButton'
+import StarRating from '@/components/StarRating'
+import AccessGate from '@/components/AccessGate'
+import Breadcrumbs from '@/components/Breadcrumbs'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Separator } from '@/components/ui/separator'
+import { Progress } from '@/components/ui/progress'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { ArrowLeft, Download, FileText, Image, AlertTriangle, Eye, EyeOff, MessageCircle, Trash2, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import Link from 'next/link'
+import NextImage from 'next/image'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+
+export default function ResourcePage() {
+  const params = useParams()
+  const router = useRouter()
+  const { user } = useAuth()
+  const resourceId = params.id as string
+  
+  const [resource, setResource] = useState<Resource | null>(null)
+  const [comments, setComments] = useState<Comment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [showOriginal, setShowOriginal] = useState(false)
+  const [votingLoading, setVotingLoading] = useState(false)
+  const [accessBlocked, setAccessBlocked] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [ratingLoading, setRatingLoading] = useState(false)
+  const [textFileContents, setTextFileContents] = useState<{[key: string]: string}>({})
+  const [loadingTextFile, setLoadingTextFile] = useState<{[key: string]: boolean}>({})
+  const [signInEmail, setSignInEmail] = useState('')
+  const [signInLoading, setSignInLoading] = useState(false)
+  const [signInMessage, setSignInMessage] = useState('')
+  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email')
+  const [hasViewedThisResource, setHasViewedThisResource] = useState(false)
+
+  useEffect(() => {
+    if (resourceId) {
+      checkAccessAndFetch()
+    }
+  }, [resourceId, user])
+
+  // Check if user has already viewed this resource
+  useEffect(() => {
+    const checkIfViewed = async () => {
+      if (!user || !resourceId) {
+        setHasViewedThisResource(false)
+        return
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('points_ledger')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('resource_id', resourceId)
+          .eq('reason', 'resource_view')
+          .single()
+
+        setHasViewedThisResource(!!data)
+      } catch (error) {
+        console.warn('Error checking view status:', error)
+        setHasViewedThisResource(false)
+      }
+    }
+
+    checkIfViewed()
+  }, [user, resourceId])
+
+  const checkAccessAndFetch = async () => {
+    // Allow fetching resource data even for non-authenticated users
+    // We'll show a modal overlay for sign-in
+
+    if (!user) {
+      // For unauthenticated users, fetch the resource but block access
+      setAccessBlocked(true)
+      fetchResource()
+      setLoading(false)
+      return
+    }
+
+    try {
+      // First fetch the resource to check if user is the owner
+      const { data: resourceData, error: resourceError } = await supabase
+        .from('resources')
+        .select('uploader_id')
+        .eq('id', resourceId)
+        .single()
+
+      // If user owns the resource, they can always view it without limits
+      if (resourceData && resourceData.uploader_id === user.id) {
+        // Still record the view for owners (for purple marking) but don't count against access limits
+        try {
+          await supabase
+            .from('points_ledger')
+            .upsert({
+              user_id: user.id,
+              resource_id: resourceId,
+              delta: 0,
+              reason: 'resource_view',
+              created_at: new Date().toISOString()
+            }, { onConflict: 'user_id,resource_id,reason' })
+        } catch (error) {
+          console.warn('Failed to record owner view (non-critical):', error)
+        }
+
+        fetchResource()
+        fetchComments()
+        subscribeToComments()
+        return
+      }
+
+      // Check if user can access this resource (for non-owners)
+      if (!user.id) {
+        console.error('User ID is missing')
+        setAccessBlocked(true)
+        setLoading(false)
+        return
+      }
+      const accessInfo = await getUserAccessInfo(user.id)
+
+      if (!accessInfo.canView) {
+        setAccessBlocked(true)
+        setLoading(false)
+        return
+      }
+
+      // Record the view (only for non-owners)
+      if (user.id) {
+        await recordResourceView(user.id, resourceId)
+        // Mark as viewed in state immediately
+        setHasViewedThisResource(true)
+      }
+
+      // Fetch resource data
+      fetchResource()
+      fetchComments()
+      subscribeToComments()
+    } catch (error) {
+      console.error('Error checking access:', error)
+      // On error, allow access
+      fetchResource()
+      fetchComments()
+      subscribeToComments()
+    }
+  }
+
+  const handleAccessGranted = () => {
+    setAccessBlocked(false)
+    // Don't re-check access - just fetch the resource data since access is now granted
+    fetchResource()
+    fetchComments()
+    subscribeToComments()
+  }
+
+  const fetchResource = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('resources')
+        .select(`
+          *,
+          class:classes(
+            *,
+            school:schools(*),
+            subject:subjects(*),
+            teacher:teachers(*)
+          ),
+          uploader:users(*),
+          ai_derivative:ai_derivatives(*),
+          files(*),
+          tags:resource_tags(tag:tags(*))
+        `)
+        .eq('id', resourceId)
+        .single()
+
+      if (error) throw error
+
+      // Increment view count (fire and forget)
+      if (user) {
+        supabase
+          .rpc('increment_view_count', { resource_id: resourceId })
+          .then(({ error }: { error: unknown }) => {
+            if (error) console.warn('Failed to increment view count:', error)
+          })
+      }
+
+      // Transform tags and get vote counts
+      const transformedResource = {
+        ...data,
+        tags: data.tags?.map((rt: { tag: { name: string } }) => rt.tag) || []
+      }
+
+      // Get vote counts and user's vote
+      const { data: voteData } = await supabase
+        .from('votes')
+        .select('value, voter_id')
+        .eq('resource_id', resourceId)
+
+      const voteCount = voteData?.reduce((sum: number, vote: { value: number }) => sum + vote.value, 0) || 0
+      const userVote = user ? voteData?.find((v: { voter_id: string; value: number }) => v.voter_id === user.id)?.value : undefined
+
+      // Get user's rating if logged in
+      let userRating = undefined
+      if (user) {
+        const { data: ratingData } = await supabase
+          .from('resource_ratings')
+          .select('rating')
+          .eq('resource_id', resourceId)
+          .eq('user_id', user.id)
+          .single()
+
+        userRating = ratingData?.rating
+      }
+
+      setResource({
+        ...transformedResource,
+        vote_count: voteCount,
+        user_vote: userVote,
+        user_rating: userRating
+      })
+    } catch (error) {
+      console.error('Error fetching resource:', error)
+      setError('Failed to load resource')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchComments = async () => {
+    try {
+      console.log('Fetching comments for resource:', resourceId)
+      const { data, error } = await supabase
+        .from('comments')
+        .select(`*, author:users!author_id(*),
+          votes:comment_votes!left(value, voter_id)
+        `)
+        .eq('resource_id', resourceId)
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching comments:', error)
+        throw error
+      }
+      
+      console.log('Comments fetched:', data?.length || 0)
+      
+      // Aggregate votes and organize comments hierarchically
+      const allComments = (data || []).map((c: Comment & { votes?: Array<{ value: number; voter_id: string }> }) => {
+        const votes = Array.isArray(c.votes) ? c.votes : []
+        const count = votes.reduce((s: number, v: { value?: number; voter_id?: string }) => s + (v?.value || 0), 0)
+        const userVote = user ? votes.find((v: { value?: number; voter_id?: string }) => v?.voter_id === user.id)?.value : undefined
+        return { ...c, vote_count: count, user_vote: userVote }
+      })
+      
+      // Organize comments into a tree structure
+      const commentMap = new Map()
+      const topLevelComments: Comment[] = []
+      
+      // First pass: create map of all comments
+      allComments.forEach((comment: Comment) => {
+        comment.replies = []
+        commentMap.set(comment.id, comment)
+      })
+      
+      // Second pass: organize into tree structure
+      allComments.forEach((comment: Comment) => {
+        if (comment.parent_id) {
+          const parent = commentMap.get(comment.parent_id)
+          if (parent) {
+            parent.replies!.push(comment)
+          }
+        } else {
+          topLevelComments.push(comment)
+        }
+      })
+      
+      setComments(topLevelComments)
+    } catch (error) {
+      console.error('Error fetching comments:', error)
+      // Don't fail silently, set empty array but log the issue
+      setComments([])
+    }
+  }
+
+  const subscribeToComments = () => {
+    const channel = supabase
+      .channel(`comments:${resourceId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'comments',
+          filter: `resource_id=eq.${resourceId}`
+        },
+        (payload: any) => {
+          if (payload.eventType === 'INSERT') {
+            // Fetch the new comment with author info
+            supabase
+              .from('comments')
+              .select('*, author:users(*)')
+              .eq('id', payload.new.id)
+              .single()
+              .then(({ data }: any) => {
+                if (data) {
+                  setComments(prev => [...prev, data])
+                }
+              })
+          } else if (payload.eventType === 'DELETE') {
+            setComments(prev => prev.filter(c => c.id !== payload.old.id))
+          } else if (payload.eventType === 'UPDATE') {
+            setComments(prev => prev.map(c =>
+              c.id === payload.new.id ? { ...c, ...payload.new } : c
+            ))
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }
+
+  const handleVote = async (value: 1 | -1) => {
+    if (!user || votingLoading) return
+
+    setVotingLoading(true)
+    try {
+      // Check if user already voted
+      const { data: existingVote } = await supabase
+        .from('votes')
+        .select('*')
+        .eq('resource_id', resourceId)
+        .eq('voter_id', user.id)
+        .single()
+
+      let actionTaken = ''
+      if (existingVote) {
+        if (existingVote.value === value) {
+          // Remove vote if clicking same button
+          await supabase
+            .from('votes')
+            .delete()
+            .eq('id', existingVote.id)
+          actionTaken = 'removed'
+        } else {
+          // Update vote if clicking different button
+          await supabase
+            .from('votes')
+            .update({ value })
+            .eq('id', existingVote.id)
+          actionTaken = value === 1 ? 'upvoted' : 'downvoted'
+        }
+      } else {
+        // Create new vote
+        await supabase
+          .from('votes')
+          .insert({
+            resource_id: resourceId,
+            voter_id: user.id,
+            value
+          })
+        actionTaken = value === 1 ? 'upvoted' : 'downvoted'
+      }
+
+      // Show notification
+      if (actionTaken === 'upvoted') {
+        showNotification('👍 Upvoted!', 'success')
+      } else if (actionTaken === 'downvoted') {
+        showNotification('👎 Downvoted!', 'success')
+      } else {
+        showNotification('Vote removed', 'info')
+      }
+
+      // Log voting activity
+      if (user && resource) {
+        try {
+          await logActivity({
+            userId: user.id,
+            action: value === 1 ? 'upvote' : 'downvote',
+            resourceId: resourceId,
+            resourceTitle: resource.title,
+            pointsChange: 0,
+            metadata: { vote_value: value }
+          })
+        } catch (activityError) {
+          console.warn('Failed to log voting activity:', activityError)
+        }
+      }
+
+      // Refresh resource to get updated vote count
+      fetchResource()
+    } catch (error) {
+      console.error('Error voting:', error)
+      showNotification('Failed to vote. Please try again.', 'error')
+    } finally {
+      setVotingLoading(false)
+    }
+  }
+
+  // Simple notification function
+  const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
+    const notification = document.createElement('div')
+    notification.textContent = message
+    notification.className = `fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white font-medium animate-fade-in ${
+      type === 'success' ? 'bg-green-500' :
+      type === 'error' ? 'bg-red-500' :
+      'bg-blue-500'
+    }`
+    document.body.appendChild(notification)
+    setTimeout(() => {
+      notification.style.opacity = '0'
+      notification.style.transition = 'opacity 0.3s'
+      setTimeout(() => notification.remove(), 300)
+    }, 2000)
+  }
+
+  const handleRate = async (rating: number) => {
+    if (!user || ratingLoading) return
+
+    // Prevent self-rating
+    if (resource && resource.uploader_id === user.id) {
+      showNotification('You cannot rate your own resource', 'error')
+      return
+    }
+
+    setRatingLoading(true)
+    try {
+      if (!isSupabaseConfigured) {
+        // Demo mode: update local state only
+        setResource(prev => prev ? { ...prev, user_rating: rating } as Resource & { user_rating?: number } : prev)
+        showNotification(`⭐ Rated ${rating} stars!`, 'success')
+      } else {
+        // Upsert ensures rating is saved/updated in one call (use rater_id to match ResourceCard)
+        const { error: upsertError } = await supabase
+          .from('resource_ratings')
+          .upsert(
+            {
+              resource_id: resourceId,
+              rater_id: user.id,
+              rating,
+              updated_at: new Date().toISOString()
+            },
+            { onConflict: 'resource_id,rater_id' }
+          )
+        if (upsertError) throw upsertError
+        
+        showNotification(`⭐ Rated ${rating} stars!`, 'success')
+      }
+
+      // Log rating activity
+      if (user && resource) {
+        try {
+          await logActivity({
+            userId: user.id,
+            action: 'rate',
+            resourceId: resourceId,
+            resourceTitle: resource.title,
+            pointsChange: 0,
+            metadata: { rating_value: rating }
+          })
+        } catch (activityError) {
+          console.warn('Failed to log rating activity:', activityError)
+        }
+      }
+
+      // Refresh resource to get updated rating
+      fetchResource()
+    } catch (error) {
+      showNotification('Failed to rate. Please try again.', 'error')
+      // Provide detailed error info in dev overlay
+      try {
+        console.error('Error rating resource:', (error as Error)?.message || 'Unknown error')
+      } catch {}
+      try {
+        const { logError } = await import('@/lib/error-logging')
+        logError('Error rating resource', error)
+      } catch {}
+    } finally {
+      setRatingLoading(false)
+    }
+  }
+
+  const handleAddComment = async (body: string, parentId?: string) => {
+    if (!user || !body.trim()) return
+
+    try {
+      const commentData: Record<string, unknown> = {
+        resource_id: resourceId,
+        author_id: user.id,
+        body: body.trim()
+      }
+      
+      if (parentId) {
+        commentData.parent_id = parentId
+      }
+
+      const { error } = await supabase
+        .from('comments')
+        .insert(commentData)
+
+      if (error) throw error
+      
+      // Log comment activity
+      if (user && resource) {
+        try {
+          await logActivity({
+            userId: user.id,
+            action: 'comment',
+            resourceId: resourceId,
+            resourceTitle: resource.title,
+            pointsChange: 0,
+            metadata: { comment_preview: body.trim().substring(0, 50) + (body.trim().length > 50 ? '...' : '') }
+          })
+        } catch (activityError) {
+          console.warn('Failed to log comment activity:', activityError)
+        }
+      }
+      
+      // Optimistic add to show immediately
+      setComments(prev => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          resource_id: resourceId,
+          author_id: user.id,
+          body: body.trim(),
+          created_at: new Date().toISOString(),
+          author: user as User
+        } as Comment
+      ])
+    } catch (error) {
+      console.error('Error adding comment:', error)
+    }
+  }
+
+  const handleCommentVote = async (commentId: string, value: 1 | -1) => {
+    if (!user) return
+    
+    try {
+      // Check if user already voted
+      const { data: existingVote } = await supabase
+        .from('comment_votes')
+        .select('*')
+        .eq('comment_id', commentId)
+        .eq('voter_id', user.id)
+        .single()
+
+      if (existingVote) {
+        if (existingVote.value === value) {
+          // Remove vote if clicking same button
+          await supabase
+            .from('comment_votes')
+            .delete()
+            .eq('id', existingVote.id)
+        } else {
+          // Update vote if clicking different button
+          await supabase
+            .from('comment_votes')
+            .update({ value })
+            .eq('id', existingVote.id)
+        }
+      } else {
+        // Create new vote
+        await supabase
+          .from('comment_votes')
+          .insert({
+            comment_id: commentId,
+            voter_id: user.id,
+            value
+          })
+      }
+
+      // Refresh comments to get updated vote counts
+      fetchComments()
+    } catch (e) {
+      console.error('Error voting on comment:', e)
+    }
+  }
+
+  // Make handler accessible to CommentThread without changing its public API in many places
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      ;(window as Window & { _handleCommentVote?: (commentId: string, value: 1 | -1) => Promise<void> })._handleCommentVote = handleCommentVote
+    }
+  }, [handleCommentVote])
+
+  const handleSuggestFix = async (itemIndex: number, patches: Array<Record<string, unknown>>) => {
+    if (!user) return
+
+    try {
+      const { error } = await supabase.functions.invoke('accept-fix', {
+        body: {
+          resourceId,
+          jsonPatch: patches
+        }
+      })
+
+      if (error) throw error
+      
+      // Refresh resource to get updated AI derivative
+      fetchResource()
+    } catch (error) {
+      console.error('Error suggesting fix:', error)
+    }
+  }
+
+  const handleDownload = async (file: ResourceFile) => {
+    try {
+      const response = await fetch(`/api/file/${file.id}`, {
+        method: 'GET',
+      })
+
+      if (!response.ok) {
+        throw new Error('Download failed')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.style.display = 'none'
+      a.href = url
+      a.download = file.original_filename || `file-${file.id}`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Error downloading file:', error)
+      alert('Failed to download file. Please try again.')
+    }
+  }
+
+  const isTextFile = (file: ResourceFile) => {
+    return file.mime && (
+      file.mime.startsWith('text/') ||
+      file.mime === 'application/json' ||
+      file.mime === 'application/xml' ||
+      file.original_filename?.match(/\.(txt|md|json|xml|csv|log|js|ts|jsx|tsx|py|java|c|cpp|h|css|html|sql)$/i)
+    )
+  }
+
+  const loadTextFileContent = async (file: ResourceFile) => {
+    if (textFileContents[file.id] || loadingTextFile[file.id]) return
+
+    setLoadingTextFile(prev => ({ ...prev, [file.id]: true }))
+    
+    try {
+      const response = await fetch(`/api/file/${file.id}/content`)
+      if (response.ok) {
+        const data = await response.json()
+        setTextFileContents(prev => ({ ...prev, [file.id]: data.content }))
+      }
+    } catch (error) {
+      console.error('Error loading text file content:', error)
+    } finally {
+      setLoadingTextFile(prev => ({ ...prev, [file.id]: false }))
+    }
+  }
+
+  const handleSignInWithEmail = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSignInLoading(true)
+    setSignInMessage('')
+
+    const { error } = await signInWithEmail(signInEmail)
+
+    if (error) {
+      setSignInMessage(error.message)
+    } else {
+      setSignInMessage('Check your email for the login link!')
+    }
+
+    setSignInLoading(false)
+  }
+
+  const handleSignInWithGoogle = async () => {
+    setSignInLoading(true)
+    setSignInMessage('')
+    const { error } = await signInWithGoogle()
+    if (error) setSignInMessage(error.message)
+    setSignInLoading(false)
+  }
+
+  const handleDeleteResource = async () => {
+    if (!user || !resource || resource.uploader?.id !== user.id) return
+
+    setDeleting(true)
+    try {
+      // Try to remove storage objects first (best-effort)
+      try {
+        const { data: fileRows } = await supabase
+          .from('files')
+          .select('path, storage_path')
+          .eq('resource_id', resourceId)
+        const paths = (fileRows || [])
+          .map((f: { path?: string; storage_path?: string }) => f?.path || f?.storage_path)
+          .filter((path: string | undefined): path is string => Boolean(path))
+        if (paths.length > 0) {
+          await supabase.storage.from('resources').remove(paths)
+        }
+      } catch (storageErr) {
+        console.warn('Storage cleanup failed (non-critical):', storageErr)
+      }
+
+      // Clean up child table rows (works even if CASCADE not present). Ignore failures.
+      try { await supabase.from('files').delete().eq('resource_id', resourceId) } catch {}
+      try { await supabase.from('ai_derivatives').delete().eq('resource_id', resourceId) } catch {}
+      try { await supabase.from('resource_tags').delete().eq('resource_id', resourceId) } catch {}
+      try { await supabase.from('votes').delete().eq('resource_id', resourceId) } catch {}
+      try { await supabase.from('flags').delete().eq('resource_id', resourceId) } catch {}
+      // Comments may be owned by others; if CASCADE is not set this could fail; handled by migration.
+
+      // Delete the resource
+      const { error } = await supabase
+        .from('resources')
+        .delete()
+        .eq('id', resourceId)
+        .eq('uploader_id', user.id) // Additional safety check
+
+      if (error) throw error
+
+      // Remove points associated with the resource
+      try {
+        await supabase.from('points_ledger')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('resource_id', resourceId)
+      } catch (pointsError) {
+        console.warn('Failed to remove points (non-critical):', pointsError)
+      }
+      
+      // Log activity
+      await logActivity({
+        userId: user.id,
+        action: 'delete',
+        resourceId: resourceId,
+        resourceTitle: resource.title,
+        pointsChange: -1,
+        metadata: { deleted_from: 'resource_page' }
+      })
+
+      // Navigate back to profile without full page reload
+      router.push('/profile')
+    } catch (error) {
+      console.error('Error deleting resource:', error)
+      setError('Failed to delete resource. Please try again.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen">
+        <Navigation />
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+            <div className="h-64 bg-gray-200 rounded"></div>
+            <div className="h-32 bg-gray-200 rounded"></div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  // For unauthenticated users, show the content with a modal overlay
+  const showSignInModal = accessBlocked && !user
+
+  if (error || (!resource && !loading)) {
+    return (
+      <div className="min-h-screen">
+        <Navigation />
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              {error || 'This resource could not be found. It may have been deleted or made private.'}
+            </AlertDescription>
+          </Alert>
+          <div className="mt-6">
+            <Button onClick={() => router.push('/')} variant="outline">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Go Back Home
+            </Button>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  if (!resource) {
+    return null // Loading state is handled above
+  }
+
+  const aiDerivative = resource.ai_derivative as AiDerivative
+
+  return (
+    <div className="min-h-screen">
+      <Navigation />
+      
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-8">
+        {/* Breadcrumbs for SEO and Navigation */}
+        <Breadcrumbs
+          items={[
+            { label: 'Browse', href: '/browse' },
+            ...(resource.class?.school?.name ? [{ label: resource.class.school.name }] : []),
+            ...(resource.class?.subject?.name ? [{ label: resource.class.subject.name }] : []),
+            { label: resource.title }
+          ]}
+          className="mb-4"
+        />
+
+        {/* Back Button */}
+        <div className="mb-4">
+          <Button variant="ghost" asChild>
+            <Link href="/">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Home
+            </Link>
+          </Button>
+        </div>
+
+        {/* Resource Header */}
+        <Card className="mb-4">
+          <CardHeader className="space-y-4">
+            {/* Title and Class Info */}
+            <div className="space-y-3">
+              <CardTitle className="text-2xl">{resource.title}</CardTitle>
+              {resource.subtitle && (
+                <p className="text-gray-600 text-base leading-relaxed whitespace-pre-wrap">
+                  {resource.subtitle}
+                </p>
+              )}
+              
+              {/* Class Info with Photo Icon */}
+              <div className="flex items-center gap-2 text-sm">
+                <Image className="w-4 h-4 text-gray-500" />
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    {resource.class?.school?.name}
+                  </Badge>
+                  <Badge variant="secondary">
+                    {resource.class?.subject?.name}
+                  </Badge>
+                  <Badge variant="secondary">
+                    {resource.class?.teacher?.name}
+                  </Badge>
+                  {resource.class?.code && (
+                    <Badge variant="outline">
+                      {resource.class.code}
+                    </Badge>
+                  )}
+                  <Badge className={
+                    resource.type === 'notes' ? 'bg-blue-100 text-blue-800' :
+                    resource.type === 'past_material' ? 'bg-green-100 text-green-800' :
+                    resource.type === 'study_guide' ? 'bg-purple-100 text-purple-800' :
+                    'bg-orange-100 text-orange-800'
+                  }>
+                    {resource.type.replace('_', ' ')}
+                  </Badge>
+            </div>
+            {(resource.difficulty || resource.study_time) && (
+              <div className="grid grid-cols-2 gap-6 pt-3">
+                {resource.difficulty && (
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-1 whitespace-nowrap">
+                      <span className="text-gray-600">Difficulty</span>
+                      <span className="font-medium">{resource.difficulty}/5</span>
+                    </div>
+                    <Progress value={(Math.min(Math.max(resource.difficulty, 1), 5) / 5) * 100} />
+                  </div>
+                )}
+                {resource.study_time && (
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-1 whitespace-nowrap">
+                      <span className="text-gray-600">Time Required</span>
+                      <span className="font-medium">
+                        {resource.study_time >= 60 
+                          ? `${Math.floor(resource.study_time / 60)}h ${resource.study_time % 60}m`
+                          : `${resource.study_time} min`
+                        }
+                      </span>
+                    </div>
+                    <Progress value={(Math.min(resource.study_time, 240) / 240) * 100} />
+                  </div>
+                )}
+              </div>
+            )}
+              </div>
+            </div>
+
+            {/* Profile Section */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {/* <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">
+                    {resource.uploader?.handle.split('-').map((word: string) => word[0]).join('').toUpperCase().slice(0, 2)}
+                  </span>
+                </div> */}
+                <Avatar>
+                  <AvatarImage src={resource.uploader?.avatar_url} alt={resource.uploader?.handle} />
+                  <AvatarFallback>
+                    {resource.uploader?.handle.split('-').map((word: string) => word[0]).join('').toUpperCase().slice(0, 2)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-medium text-sm">
+                    <Link 
+                      href={`/profile?user=${resource.uploader?.handle}`}
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {resource.uploader?.handle}
+                    </Link>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {formatDistanceToNow(new Date(resource.created_at), { addSuffix: true })}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Owner Actions */}
+              {user && resource.uploader?.id === user.id && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={handleDeleteResource}
+                      disabled={deleting}
+                      variant="destructive"
+                      className="text-red-600 focus:text-red-600"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {deleting ? 'Deleting...' : 'Delete Post'}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+
+            {/* Voting, Comments, and Rating Section */}
+            <div className="flex items-center justify-between pt-2 border-t">
+              <div className="flex items-center gap-4">
+                <VoteButton
+                  resourceId={resourceId}
+                  currentVote={resource.user_vote}
+                  voteCount={resource.vote_count || 0}
+                  onVote={handleVote}
+                  loading={votingLoading}
+                />
+                <div className="flex items-center gap-1 text-sm text-gray-600">
+                  <MessageCircle className="w-4 h-4" />
+                  <span>{comments.length}</span>
+                </div>
+                <FlagButton resourceId={resourceId} />
+              </div>
+              
+              <StarRating
+                resourceId={resourceId}
+                currentRating={(resource as Resource & { user_rating?: number }).user_rating}
+                averageRating={resource.average_rating}
+                ratingCount={resource.rating_count}
+                onRate={user ? handleRate : undefined}
+                loading={ratingLoading}
+                readOnly={!user}
+                className="justify-end"
+              />
+            </div>
+
+            {/* Tags */}
+            {resource.tags && resource.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 pt-2 border-t">
+                {resource.tags.map((tag) => (
+                  <Badge key={tag.id} variant="outline" className="text-xs">
+                    {tag.name}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </CardHeader>
+
+          {/* Files List with Image Preview */}
+          {resource.files && resource.files.length > 0 && (
+            <CardContent>
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium">Attached Files ({resource.files.length})</h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowOriginal(!showOriginal)}
+                  >
+                    {showOriginal ? (
+                      <>
+                        <EyeOff className="w-4 h-4 mr-2" />
+                        Hide Files
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-4 h-4 mr-2" />
+                        Show Files
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Image Slider */}
+                {(() => {
+                  const imageFiles = resource.files.filter(file => file.mime && file.mime.startsWith('image/'));
+                  if (imageFiles.length === 0) return null;
+                  
+                  const currentFile = imageFiles[currentImageIndex] || imageFiles[0];
+                  
+                  return (
+                    <div className="mb-4">
+                      <div className="relative">
+                        <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                          <NextImage
+                            src={`/api/file/${currentFile.id}?v=${encodeURIComponent(((resource as any).updated_at as string | undefined) || resource.created_at || '')}`}
+                            alt={`${resource?.title || 'Study resource'} - ${currentFile.original_filename}`}
+                            fill
+                            className={`object-contain transition-all duration-300 ${
+                              !hasViewedThisResource && resource.uploader?.id !== user?.id 
+                                ? 'filter blur-lg scale-105' 
+                                : ''
+                            }`}
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+                            loading="lazy"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                          <div className="hidden w-full h-full flex items-center justify-center text-gray-500">
+                            <div className="text-center">
+                              <Image className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                              <p className="text-sm">Image not available</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Blur overlay message for unviewed resources */}
+                        {!hasViewedThisResource && resource.uploader?.id !== user?.id && (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="bg-white/90 backdrop-blur-sm border-2 border-indigo-300 text-indigo-700 rounded-xl px-6 py-4 flex items-center gap-3 shadow-lg">
+                              <Eye className="w-6 h-6" />
+                              <div className="text-left">
+                                <p className="font-semibold text-sm">Preview Only</p>
+                                <p className="text-xs">Open to view full quality</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Navigation arrows (only show if more than 1 image) */}
+                        {imageFiles.length > 1 && (
+                          <>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => setCurrentImageIndex(prev => prev === 0 ? imageFiles.length - 1 : prev - 1)}
+                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-sm h-8 w-8 p-0"
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => setCurrentImageIndex(prev => prev === imageFiles.length - 1 ? 0 : prev + 1)}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-sm h-8 w-8 p-0"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                        
+                        {/* Download button */}
+                        <div className="absolute top-2 right-2 flex gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleDownload(currentFile)}
+                            className="bg-white/90 hover:bg-white shadow-sm"
+                          >
+                            <Download className="w-4 h-4 mr-1" />
+                            Download
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Dots indicator (only show if more than 1 image) */}
+                      {imageFiles.length > 1 && (
+                        <div className="flex justify-center mt-3 gap-2">
+                          {imageFiles.map((_, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setCurrentImageIndex(index)}
+                              className={`w-2 h-2 rounded-full transition-colors ${
+                                index === currentImageIndex 
+                                  ? 'bg-blue-600' 
+                                  : 'bg-gray-300 hover:bg-gray-400'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Current image filename */}
+                      <div className="mt-2 text-center">
+                        <p className="text-sm font-medium">{currentFile.original_filename}</p>
+                        {imageFiles.length > 1 && (
+                          <p className="text-xs text-gray-500">
+                            {currentImageIndex + 1} of {imageFiles.length}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Always show difficulty and time */}
+                {(resource.difficulty || resource.study_time) && (
+                  <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {resource.difficulty && (
+                      <div>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-gray-600">Difficulty</span>
+                          <span className="font-medium">{resource.difficulty}/5</span>
+                        </div>
+                        <Progress value={(Math.min(Math.max(resource.difficulty, 1), 5) / 5) * 100} />
+                      </div>
+                    )}
+                    {resource.study_time && (
+                      <div>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-gray-600">Time Required</span>
+                          <span className="font-medium">
+                            {resource.study_time >= 60 
+                              ? `${Math.floor(resource.study_time / 60)} ${Math.floor(resource.study_time / 60) === 1 ? 'hour' : 'hours'}${resource.study_time % 60 !== 0 ? ' ' + (resource.study_time % 60) + ' min' : ''}`
+                              : `${resource.study_time} min`
+                            }
+                          </span>
+                        </div>
+                        <Progress value={(Math.min(resource.study_time, 120) / 120) * 100} />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {showOriginal && (
+                  <div className="grid gap-2">
+                    <h5 className="font-medium text-sm text-gray-700 mb-2">All Files:</h5>
+                    {resource.files.map((file) => (
+                      <div key={file.id} className="bg-gray-50 rounded-lg">
+                        <div className="flex items-center justify-between p-3 hover:bg-gray-100 transition-colors">
+                          <div className="flex items-center gap-3">
+                            {file.mime === 'application/pdf' ? (
+                              <FileText className="w-5 h-5 text-red-600" />
+                            ) : file.mime && file.mime.startsWith('image/') ? (
+                              <Image className="w-5 h-5 text-blue-600" />
+                            ) : (
+                              <FileText className="w-5 h-5 text-gray-600" />
+                            )}
+                            <div>
+                              <span className="font-medium">{file.original_filename}</span>
+                              <p className="text-xs text-gray-500 capitalize">{file.mime?.split('/')[1] || 'Unknown'}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            {isTextFile(file) && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => loadTextFileContent(file)}
+                                disabled={loadingTextFile[file.id]}
+                                className="hover:bg-white"
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                {loadingTextFile[file.id] ? 'Loading...' : 'View'}
+                              </Button>
+                            )}
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDownload(file)}
+                              className="hover:bg-white"
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              Download
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {/* Text file content display */}
+                        {isTextFile(file) && textFileContents[file.id] && (
+                          <div className="border-t border-gray-200 p-4">
+                            <div className="bg-white rounded border">
+                              <div className="flex items-center justify-between p-2 border-b bg-gray-50">
+                                <span className="text-sm font-medium text-gray-700">File Content</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setTextFileContents(prev => {
+                                    const newState = { ...prev }
+                                    delete newState[file.id]
+                                    return newState
+                                  })}
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <EyeOff className="w-4 h-4" />
+                                </Button>
+                              </div>
+                              <pre className="p-4 text-sm overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap font-mono text-gray-800">
+                                {textFileContents[file.id]}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          )}
+        </Card>
+
+        {/* AI Practice Content */}
+        {aiDerivative?.status === 'ready' && aiDerivative.structured_json && (
+          <div className="mb-6">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold mb-2">AI Practice Questions</h2>
+              <p className="text-gray-600">
+                {aiDerivative.summary || 'Interactive practice questions generated from the uploaded material.'}
+              </p>
+            </div>
+            
+            <PracticeView
+              structured={aiDerivative.structured_json}
+              onSuggestFix={user ? handleSuggestFix : undefined}
+            />
+          </div>
+        )}
+
+        {/* Blocked Content */}
+        {aiDerivative?.status === 'blocked' && (
+          <Alert className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              This resource has been blocked for policy reasons: {aiDerivative.reasons?.join(', ')}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Processing Status */}
+        {aiDerivative?.status === 'pending' && (
+          <Alert className="mb-6">
+            <AlertDescription>
+              AI is currently processing this resource to generate practice questions. Check back soon!
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Separator className="my-6" />
+
+        {/* Comments Section */}
+        <div id="comments">
+          <div className="flex items-center gap-2 mb-4">
+            <MessageCircle className="w-5 h-5" />
+            <h2 className="text-xl font-semibold">
+              Discussion ({comments.length})
+            </h2>
+          </div>
+
+          <CommentThread
+            comments={comments}
+            resourceId={resourceId}
+            onAddComment={handleAddComment}
+            currentUser={user}
+            // @ts-expect-error - onVote is optional but we're passing it here
+            onVote={handleCommentVote}
+          />
+        </div>
+      </main>
+
+      {/* Sign-In Modal for Unauthenticated Users */}
+      <Dialog open={showSignInModal} onOpenChange={(open) => {
+        if (!open) {
+          // If user clicks X or tries to close, navigate to home
+          window.location.href = '/'
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center">Sign In Required</DialogTitle>
+            <DialogDescription className="text-center">
+              Please sign in to view this resource and access all features
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            {/* Google Sign-In Button */}
+            <Button
+              onClick={handleSignInWithGoogle}
+              disabled={signInLoading}
+              className="w-full bg-white hover:bg-gray-50 text-gray-900 border-2 border-gray-300 h-12 text-base font-semibold shadow-sm"
+            >
+              <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Continue with Google
+            </Button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-500">Or continue with</span>
+              </div>
+            </div>
+
+            {/* Auth Method Tabs */}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={authMethod === 'email' ? 'default' : 'outline'}
+                onClick={() => setAuthMethod('email')}
+                className="flex-1"
+              >
+                Email
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled
+                className="flex-1 opacity-50 cursor-not-allowed"
+                title="Phone authentication is not currently available"
+              >
+                Phone (Coming Soon)
+              </Button>
+            </div>
+
+            {/* Email Sign-In Form */}
+            {authMethod === 'email' && (
+              <form onSubmit={handleSignInWithEmail} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signin-email">Email Address</Label>
+                  <Input
+                    id="signin-email"
+                    type="email"
+                    value={signInEmail}
+                    onChange={(e) => setSignInEmail(e.target.value)}
+                    placeholder="your.email@example.com"
+                    required
+                    className="h-12"
+                    disabled={signInLoading}
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={signInLoading}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 text-base font-semibold"
+                >
+                  {signInLoading ? 'Sending...' : 'Send Magic Link'}
+                </Button>
+              </form>
+            )}
+
+            {signInMessage && (
+              <Alert className={signInMessage.includes('Check your email') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}>
+                <AlertDescription className={signInMessage.includes('Check your email') ? 'text-green-800' : 'text-red-800'}>
+                  {signInMessage}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <p className="text-xs text-center text-gray-500 mt-4">
+              By signing in, you agree to our Terms of Service and Privacy Policy
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}

@@ -1,0 +1,22 @@
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Disallow admin, API routes, and authentication pages
+Disallow: /admin/
+Disallow: /api/
+Disallow: /auth/
+
+# Allow important public pages
+Allow: /browse
+Allow: /search
+Allow: /schools
+Allow: /live
+Allow: /help-center
+Allow: /resource/
+
+# Sitemap location
+Sitemap: https://studyshare.app/sitemap.xml
+
+# Crawl delay (prevents server overload)
+Crawl-delay: 1
