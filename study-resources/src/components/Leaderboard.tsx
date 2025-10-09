@@ -72,7 +72,7 @@ export default function Leaderboard({ schoolId, className, hideTitle = false }: 
           .eq('follower_id', user.id)
 
         if (!error) {
-          setFollowedUsers((data || []).map(r => r.followed_id))
+          setFollowedUsers((data || []).map((r: { followed_id: string }) => r.followed_id))
         }
       } catch {}
     }
