@@ -1,0 +1,9 @@
+# Root ignores
+.DS_Store
+node_modules/
+.next/
+.vercel/
+
+# Subproject ignores
+study-resources/node_modules/
+study-resources/.next/
