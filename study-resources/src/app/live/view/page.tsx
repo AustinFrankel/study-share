@@ -12,8 +12,8 @@ import { Lock, Eye, PlayCircle, CreditCard, Loader2, CheckCircle2, AlertCircle }
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { signInWithEmail, signInWithGoogle } from '@/lib/auth'
-import dynamic from 'next/dynamic'
-const PhoneAuth = dynamic(() => import('@/components/PhoneAuth'), { ssr: false })
+import dynamicImport from 'next/dynamic'
+const PhoneAuth = dynamicImport(() => import('@/components/PhoneAuth'), { ssr: false })
 import { Input } from '@/components/ui/input'
 
 interface Problem {
