@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
-    "vercel-build": "next build --turbopack",
+    "vercel-build": "next build",
     "start": "next start",
     "lint": "eslint",
     "setup": "node scripts/setup-env.js",
