@@ -519,145 +519,51 @@ function ProfilePageContent() {
       return
     }
 
-    // Confirm deletion
     const resourceToDelete = recentResources.find(r => r.id === resourceId)
     const confirmMessage = `Are you sure you want to delete "${resourceToDelete?.title || 'this resource'}"? This action cannot be undone.`
-    
     if (!window.confirm(confirmMessage)) {
       return
     }
 
     try {
-      // Get resource title for activity log
-      const resourceTitle = resourceToDelete?.title || 'Unknown Resource'
-      
-      // First verify the resource exists and user owns it
-      const { data: resourceCheck, error: checkError } = await supabase
-        .from('resources')
-        .select('id, uploader_id, title')
-        .eq('id', resourceId)
-        .eq('uploader_id', user.id)
-        .single()
-      
-      if (checkError || !resourceCheck) {
-        throw new Error('Resource not found or you do not have permission to delete it.')
+      // Use server-side hard delete (also removes storage + child rows)
+      const resp = await fetch(`/api/resource/${resourceId}/delete`, { method: 'DELETE' })
+      if (!resp.ok) {
+        const { error } = await resp.json().catch(() => ({ error: 'Delete failed' }))
+        throw new Error(error)
       }
 
-      // Ensure user owns the resource before deletion
-      const { error } = await supabase
-        .from('resources')
-        .delete()
-        .eq('id', resourceId)
-        .eq('uploader_id', user.id) // Security check - ensure user owns the resource
-      
-      if (error) {
-        console.error('Delete error:', error)
-        throw error
-      }
-      
-      // Clean up related data
+      // Log activity (best-effort)
       try {
-        // Remove activity logs for this resource
-        await supabase
-          .from('activity_log')
-          .delete()
-          .eq('resource_id', resourceId)
-          .eq('user_id', user.id)
-
-        // Remove points associated with the resource
-        await supabase
-          .from('points_ledger')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('resource_id', resourceId)
-
-        // Remove files associated with the resource
-        await supabase
-          .from('files')
-          .delete()
-          .eq('resource_id', resourceId)
-
-        // Remove votes for this resource
-        await supabase
-          .from('votes')
-          .delete()
-          .eq('resource_id', resourceId)
-
-        // Remove comments for this resource
-        await supabase
-          .from('comments')
-          .delete()
-          .eq('resource_id', resourceId)
-
-        // Remove AI derivatives
-        await supabase
-          .from('ai_derivatives')
-          .delete()
-          .eq('resource_id', resourceId)
-
-        // Remove resource tags
-        await supabase
-          .from('resource_tags')
-          .delete()
-          .eq('resource_id', resourceId)
-
-        // Remove flags
-        await supabase
-          .from('flags')
-          .delete()
-          .eq('resource_id', resourceId)
-
-      } catch (cleanupError) {
-        console.warn('Failed to clean up related data (non-critical):', cleanupError)
-      }
-      
-      // Log activity
-      if (user?.id) {
         await logActivity({
           userId: user.id,
           action: 'delete',
-          resourceId: resourceId,
-          resourceTitle: resourceTitle,
-          pointsChange: -1, // Usually lose points for deletion
+          resourceId,
+          resourceTitle: resourceToDelete?.title || 'Unknown Resource',
+          pointsChange: -1,
           metadata: { deleted_from: 'profile_page' }
         })
-      }
-      
-      // Update local state immediately and don't refetch to avoid showing deleted resource
+      } catch {}
+
+      // Remove from UI immediately
       setRecentResources(prev => prev.filter(r => r.id !== resourceId))
-      
-      // Refresh user stats only (not recent resources since we just updated them)
-      if (user) {
-        try {
-          const [userStats, userRank] = await Promise.all([
-            getUserStats(user.id),
-            getUserRank(user.id)
-          ])
-          setStats(userStats)
-          setRank(userRank)
-        } catch (statsError) {
-          console.warn('Failed to refresh stats:', statsError)
-        }
-      }
-      
+
+      // Refresh stats silently
+      try {
+        const [userStats, userRank] = await Promise.all([
+          getUserStats(user.id),
+          getUserRank(user.id)
+        ])
+        setStats(userStats)
+        setRank(userRank)
+      } catch {}
+
       setError('Resource deleted successfully')
-      
-      // Clear success message after 3 seconds
       setTimeout(() => setError(''), 3000)
     } catch (e) {
       console.error('Error removing resource:', e)
-      
-      // Provide more specific error messages
-      const error = e as Error & { code?: string }
-      if (error?.message?.includes('permission')) {
-        setError('Permission denied. You can only delete your own resources.')
-      } else if (error?.message?.includes('not found')) {
-        setError('Resource not found. It may have already been deleted.')
-      } else if (error?.code === 'PGRST116') {
-        setError('Resource not found or you do not have permission to delete it.')
-      } else {
-        setError(`Failed to remove resource: ${error?.message || 'Unknown error'}. Please try again.`)
-      }
+      const message = e instanceof Error ? e.message : 'Unknown error'
+      setError(`Failed to remove resource: ${message}`)
     }
   }
 

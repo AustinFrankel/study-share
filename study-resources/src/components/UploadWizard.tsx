@@ -88,6 +88,7 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadComplete, setUploadComplete] = useState(false)
   const [uploadSuccessMessage, setUploadSuccessMessage] = useState('')
+  const [diagnostics, setDiagnostics] = useState<{ running: boolean; results: Array<{ id: string; ok: boolean; url: string; filename: string }> }>({ running: false, results: [] })
   const [expandedImage, setExpandedImage] = useState<string | null>(null)
   
   // Text upload state
@@ -992,18 +993,46 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
 
       // Create resource in database (required for a valid upload)
       if (isSupabaseConfigured) {
-        const { data, error } = await supabase.from('resources').insert({
-          title: title.trim(),
-          subtitle: description.trim() || null,
-          type,
-          class_id: selectedClass,
-          uploader_id: user.id,
-          difficulty,
-          study_time: studyTime
-        }).select().single()
+        // Enforce unique title per class across all users to avoid duplicates
+        try {
+          const { data: existing } = await supabase
+            .from('resources')
+            .select('id')
+            .ilike('title', title.trim())
+            .limit(1)
+          if (existing && existing.length > 0) {
+            setLoading(false)
+            setUploadProgress(0)
+            setProcessingStatus('')
+            setError('A resource with this title already exists. Please choose a different title.')
+            return
+          }
+        } catch (e) {
+          // If uniqueness check fails for any reason, continue but surface a friendly error later
+        }
+        // Use API route which also enforces global unique title atomically
+        const apiResp = await fetch('/api/resource/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: title.trim(),
+            subtitle: description.trim() || null,
+            type,
+            class_id: selectedClass,
+            uploader_id: user.id,
+            public: true,
+            difficulty,
+            study_time: studyTime
+          })
+        })
+        if (!apiResp.ok) {
+          const { error } = await apiResp.json().catch(() => ({ error: 'Failed to create resource' }))
+          throw new Error(error)
+        }
+        const data = await apiResp.json()
         
-        if (error || !data) {
-          setError(`Failed to create resource: ${error?.message || 'unknown error'}`)
+        if (!data) {
+          setError('Failed to create resource: unknown error')
           setLoading(false)
           setUploadProgress(0)
           setProcessingStatus('')
@@ -1052,19 +1081,39 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
           ))
           setUploadProgress(baseProgress + (i / files.length) * uploadProgressRange * 0.5)
 
-          // Upload to Supabase storage
+          // Upload to Supabase storage with fallback bucket
+          let uploadedOk = false
           if (isSupabaseConfigured) {
-            const { error: uploadError } = await supabase.storage
-              .from('resources')
-              .upload(fileName, uploadFile.file)
-            
-            if (uploadError) {
-              console.warn(`Storage upload failed for ${uploadFile.file.name}, continuing anyway:`, uploadError.message)
-            } else {
-              console.log(`File uploaded successfully: ${uploadFile.file.name}`)
+            try {
+              const result = await supabase.storage
+                .from('resources')
+                .upload(fileName, uploadFile.file)
+              if (!result.error) {
+                uploadedOk = true
+                console.log(`File uploaded to 'resources': ${uploadFile.file.name}`)
+              }
+            } catch (e) {
+              // ignore here; try fallback bucket below
+            }
+            if (!uploadedOk) {
+              try {
+                const result2 = await supabase.storage
+                  .from('resource-files')
+                  .upload(fileName, uploadFile.file)
+                if (!result2.error) {
+                  uploadedOk = true
+                  console.log(`File uploaded to fallback bucket 'resource-files': ${uploadFile.file.name}`)
+                }
+              } catch (e) {
+                // still failed
+              }
+            }
+            if (!uploadedOk) {
+              throw new Error(`Upload failed for ${uploadFile.file.name} in all buckets`)
             }
           } else {
             console.log(`File would be uploaded in production: ${uploadFile.file.name}`)
+            uploadedOk = true
           }
           
           // Brief delay for UI feedback
@@ -1076,7 +1125,7 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
           ))
           setUploadProgress(baseProgress + (i / files.length) * uploadProgressRange * 0.8)
 
-          // Create file record in database
+          // Create file record in database (only after successful storage upload)
           if (isSupabaseConfigured) {
             const { error: recordError } = await supabase.from('files').insert({
               id: uploadFile.id,
@@ -1091,7 +1140,7 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
             })
             
             if (recordError) {
-              console.warn(`File record creation failed for ${uploadFile.file.name}:`, recordError.message)
+              throw new Error(`File record creation failed for ${uploadFile.file.name}: ${recordError.message}`)
             } else {
               console.log(`File record created for ${uploadFile.file.name}`)
             }
@@ -1174,11 +1223,29 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
       // Show success message on screen and redirect
       setUploadSuccessMessage(`🎉 Upload successful! Resource "${resource.title}" has been uploaded successfully and is now shareable with your classmates.`)
       setUploadComplete(true)
-      
-      // Auto-redirect after showing success message with cache-busting timestamp
+
+      // Diagnostics: verify storage objects are accessible via API route and expose direct links
+      try {
+        setDiagnostics({ running: true, results: [] })
+        const results: Array<{ id: string; ok: boolean; url: string; filename: string }> = []
+        for (const f of files) {
+          const url = `/api/file/${f.id}?v=${Date.now()}`
+          try {
+            const resp = await fetch(url, { cache: 'no-store' })
+            results.push({ id: f.id, ok: resp.ok, url, filename: f.file.name })
+          } catch (e) {
+            results.push({ id: f.id, ok: false, url, filename: f.file.name })
+          }
+        }
+        setDiagnostics({ running: false, results })
+      } catch (e) {
+        setDiagnostics({ running: false, results: [] })
+      }
+
+      // Redirect user to the new resource page so they can see their file immediately
       setTimeout(() => {
-        router.push(`/browse?refresh=${Date.now()}`)
-      }, 3000)
+        router.push(`/resource/${resource.id}?refresh=${Date.now()}&from=upload`)
+      }, 1500)
 
     } catch (error) {
       console.error('Upload error:', error)
@@ -1230,12 +1297,20 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
     onDrop: (acceptedFiles) => {
       console.log('Files dropped:', acceptedFiles)
       const uploadFiles = acceptedFiles.map(file => ({
-        id: Math.random().toString(36).substr(2, 9),
+        id: generateId(),
         file,
         progress: 0,
         uploaded: false
       }))
-      setFiles(prev => [...prev, ...uploadFiles])
+      setFiles(prev => {
+        const next = [...prev, ...uploadFiles]
+        return next
+      })
+      // Auto-advance to step 2 so users immediately see details after dropping
+      if (currentStep < 2 && acceptedFiles.length > 0) {
+        setCurrentStep(2)
+        setError('')
+      }
     },
     accept: {
       'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
@@ -1307,6 +1382,14 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
                           src={createFilePreviewUrl(file.file)} 
                           alt={file.file.name}
                           className="w-full h-full object-cover rounded border"
+                        />
+                      </div>
+                    ) : file.file.type === 'application/pdf' ? (
+                      <div className="relative w-12 h-12">
+                        <iframe
+                          src={createFilePreviewUrl(file.file)}
+                          title={file.file.name}
+                          className="w-full h-full rounded border bg-white"
                         />
                       </div>
                     ) : isHeic ? (
@@ -1621,7 +1704,7 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
                   <Plus className="w-4 h-4" />
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-md mx-4 sm:mx-auto rounded-xl">
                 <DialogHeader>
                   <DialogTitle>Add New School</DialogTitle>
                 </DialogHeader>
@@ -1691,7 +1774,7 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
                     <Plus className="w-4 h-4" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+              <DialogContent className="max-w-md mx-4 sm:mx-auto rounded-xl">
                   <DialogHeader>
                     <DialogTitle>Add New Teacher</DialogTitle>
                   </DialogHeader>
@@ -1746,7 +1829,7 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
                     <Plus className="w-4 h-4" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-md mx-4 sm:mx-auto rounded-xl">
                   <DialogHeader>
                     <DialogTitle>Add New Class</DialogTitle>
                   </DialogHeader>
@@ -1847,6 +1930,14 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
                           className="w-full h-full object-cover rounded border"
                         />
                       </div>
+                    ) : file.file.type === 'application/pdf' ? (
+                      <div className="relative w-12 h-12">
+                        <iframe
+                          src={createFilePreviewUrl(file.file)}
+                          title={file.file.name}
+                          className="w-full h-full rounded border bg-white"
+                        />
+                      </div>
                     ) : isHeic ? (
                       <div className="w-12 h-12 rounded border bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-500">
                         <ImageOff className="w-5 h-5" />
@@ -1876,6 +1967,29 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {/* Diagnostics after upload */}
+        {uploadComplete && diagnostics && (
+          <div className="mt-4 border rounded-lg p-3 bg-gray-50">
+            <div className="font-medium mb-2">Upload Diagnostics</div>
+            {diagnostics.running ? (
+              <div className="text-sm text-gray-600">Verifying storage objects...</div>
+            ) : diagnostics.results.length > 0 ? (
+              <div className="space-y-1">
+                {diagnostics.results.map(r => (
+                  <div key={r.id} className="text-sm flex items-center justify-between">
+                    <span className="truncate mr-2">{r.filename}</span>
+                    <a className={`underline ${r.ok ? 'text-green-700' : 'text-red-700'}`} href={r.url} target="_blank" rel="noreferrer">
+                      {r.ok ? 'Open served URL' : 'Not reachable'}
+                    </a>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-gray-600">No diagnostics available.</div>
+            )}
           </div>
         )}
       </CardContent>

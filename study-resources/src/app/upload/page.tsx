@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Upload, Lock } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { signInWithEmail, signInWithGoogle, signOut } from '@/lib/auth'
+import dynamic from 'next/dynamic'
+const PhoneAuth = dynamic(() => import('@/components/PhoneAuth'), { ssr: false })
 
 export default function UploadPage() {
   const { user, loading, session } = useAuth()
@@ -174,6 +176,10 @@ export default function UploadPage() {
                     )}
                   </Button>
                 </form>
+                {/* Phone sign-in (optional, if provider configured) */}
+                <div className="pt-2">
+                  <PhoneAuth />
+                </div>
                 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">

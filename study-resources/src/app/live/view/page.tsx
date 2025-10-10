@@ -12,6 +12,8 @@ import { Lock, Eye, PlayCircle, CreditCard, Loader2, CheckCircle2, AlertCircle }
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { signInWithEmail, signInWithGoogle } from '@/lib/auth'
+import dynamic from 'next/dynamic'
+const PhoneAuth = dynamic(() => import('@/components/PhoneAuth'), { ssr: false })
 import { Input } from '@/components/ui/input'
 
 interface Problem {
@@ -430,43 +432,47 @@ D) establishes`
 
       {/* Auth Dialog */}
       <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Sign in to Continue</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSignIn} className="space-y-4">
-            <div>
-              <p className="text-sm text-gray-600 mb-4">
-                Create a free account to unlock more problems!
-              </p>
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={authLoading}>
-              {authLoading ? 'Sending...' : 'Send Magic Link'}
-            </Button>
-            <div className="relative text-center">
-              <span className="px-2 text-xs text-gray-500 bg-white relative z-10">or</span>
-              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-gray-200" />
-            </div>
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full" 
-              onClick={handleGoogleSignIn}
-              disabled={authLoading}
-            >
-              Continue with Google
-            </Button>
-            {authMessage && (
-              <p className="text-sm text-green-600">{authMessage}</p>
-            )}
-          </form>
+          <div className="space-y-5">
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-4">
+                  Create a free account to unlock more problems!
+                </p>
+                <Input
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={authLoading}>
+                {authLoading ? 'Sending...' : 'Send Magic Link'}
+              </Button>
+              <div className="relative text-center">
+                <span className="px-2 text-xs text-gray-500 bg-white relative z-10">or</span>
+                <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-gray-200" />
+              </div>
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full" 
+                onClick={handleGoogleSignIn}
+                disabled={authLoading}
+              >
+                Continue with Google
+              </Button>
+              {authMessage && (
+                <p className="text-sm text-green-600">{authMessage}</p>
+              )}
+            </form>
+            {/* Phone sign-in (lazy loaded) */}
+            <PhoneAuth />
+          </div>
         </DialogContent>
       </Dialog>
 

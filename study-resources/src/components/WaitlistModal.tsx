@@ -50,10 +50,11 @@ export default function WaitlistModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all duration-300 scale-100">
+    <div className="fixed inset-0 bg-black/50 sm:bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+      {/* Mobile bottom sheet; center modal on larger screens */}
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md transform transition-all duration-300">
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-purple-600 to-indigo-600 rounded-t-2xl p-6">
+        <div className="relative bg-gradient-to-r from-purple-600 to-indigo-600 rounded-t-2xl p-4 sm:p-6">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors"
@@ -61,19 +62,19 @@ export default function WaitlistModal({
             <X className="w-6 h-6" />
           </button>
           
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-              <Bell className="w-6 h-6 text-white" />
+          <div className="flex items-center gap-3 mb-1 sm:mb-2">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-full flex items-center justify-center">
+              <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Join Waitlist</h2>
-              <p className="text-purple-100 text-sm">{testName}</p>
+              <h2 className="text-lg sm:text-xl font-bold text-white">Join Waitlist</h2>
+              <p className="text-purple-100 text-xs sm:text-sm">{testName}</p>
             </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {isSuccess ? (
             <div className="text-center py-8">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -87,34 +88,34 @@ export default function WaitlistModal({
           ) : (
             <>
               {/* Test Info */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <Clock className="w-5 h-5 text-indigo-600" />
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
                   <div>
-                    <p className="font-semibold text-gray-900">{testDate.toLocaleDateString('en-US', {
+                    <p className="text-sm sm:text-base font-semibold text-gray-900">{testDate.toLocaleDateString('en-US', {
                       weekday: 'long',
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'
                     })}</p>
-                    <p className="text-sm text-gray-600">Practice materials coming soon</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Practice materials coming soon</p>
                   </div>
                 </div>
               </div>
 
               {/* Benefits */}
-              <div className="mb-6">
-                <h3 className="font-semibold text-gray-900 mb-3">What you'll get:</h3>
+              <div className="mb-4 sm:mb-6">
+                <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-2 sm:mb-3">What you'll get:</h3>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
                     <Star className="w-4 h-4 text-yellow-500" />
                     Early access to practice questions
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
                     <Users className="w-4 h-4 text-blue-500" />
                     Join the community discussion
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
                     <Bell className="w-4 h-4 text-green-500" />
                     Get notified when materials are ready
                   </div>
@@ -122,9 +123,9 @@ export default function WaitlistModal({
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                 <div>
-                  <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                  <Label htmlFor="email" className="text-xs sm:text-sm font-medium text-gray-700">
                     Email Address *
                   </Label>
                   <Input
@@ -132,14 +133,14 @@ export default function WaitlistModal({
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your@email.com"
+                    placeholder="you@email.com"
                     className="mt-1"
                     required
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
+                  <Label htmlFor="phone" className="text-xs sm:text-sm font-medium text-gray-700">
                     Phone Number (Optional)
                   </Label>
                   <Input
@@ -154,7 +155,7 @@ export default function WaitlistModal({
 
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-3 rounded-xl transition-all duration-200 transform hover:scale-105"
+                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-3 rounded-xl transition-all duration-200"
                   disabled={isLoading || !email.trim()}
                 >
                   {isLoading ? (
@@ -171,7 +172,7 @@ export default function WaitlistModal({
                 </Button>
               </form>
 
-              <p className="text-xs text-gray-500 text-center mt-4">
+              <p className="text-[11px] sm:text-xs text-gray-500 text-center mt-3 sm:mt-4">
                 We'll never spam you. Unsubscribe anytime.
               </p>
             </>

@@ -53,7 +53,7 @@ export default function Footer() {
               <Linkedin className="w-5 h-5" />
             </a>
             <a
-              href="https://www.youtube.com/@StudyShareHq"
+              href="https://www.youtube.com/@AI-Powered Test HubHq"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="YouTube"

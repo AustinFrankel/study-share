@@ -79,6 +79,11 @@ export default function ResourceCard({
 
   const handleVote = useCallback(async (value: 1 | -1) => {
     if (!onVote || votingLoading || isVoting) return
+    // Hide voting on others' accounts when logged out or self-owned
+    if (!currentUserId || resource.uploader?.id === currentUserId) {
+      showToast('Sign in to vote on classmates\' resources', 'info')
+      return
+    }
 
     // Optimistic update
     const prevVote = localVote
@@ -206,6 +211,8 @@ export default function ResourceCard({
     const isImageExt = /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)$/i.test(name)
     return isImageMime || isImageExt
   })
+  // If first image fails to load, fall back to a PDF badge or neutral gradient
+  const [imageUrlVersion] = useState(() => encodeURIComponent((resource as any).updated_at || resource.created_at || ''))
   const firstPdfFile = resource.files?.find(file => {
     const mime = file.mime || (file as any).type || ''
     const name = (file.original_filename || '').toLowerCase()
@@ -242,7 +249,7 @@ export default function ResourceCard({
             <>
               {/* Always show the blurred background image */}
               <img
-                src={`/api/file/${firstImageFile.id}?v=${encodeURIComponent((resource as any).updated_at || resource.created_at || '')}`}
+                src={`/api/file/${firstImageFile.id}?v=${imageUrlVersion}`}
                 alt=""
                 className="absolute inset-0 w-full h-full object-cover filter blur-md scale-105"
                 style={{ zIndex: 0 }}
@@ -251,7 +258,7 @@ export default function ResourceCard({
               {/* Show crisp image if user is signed in and not gated, or owns the resource */}
               {(currentUserId || currentUserId === resource.uploader?.id) && !blurredPreview && (
                 <img
-                  src={`/api/file/${firstImageFile.id}?v=${encodeURIComponent((resource as any).updated_at || resource.created_at || '')}`}
+                  src={`/api/file/${firstImageFile.id}?v=${imageUrlVersion}`}
                   alt={resource.title}
                   className="relative w-full h-full object-contain"
                   style={{ zIndex: 1 }}
@@ -260,8 +267,17 @@ export default function ResourceCard({
               )}
             </>
           ) : (
-            // No explicit visual: neutral gradient so we never display a blank area (no PDF badge)
-            <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-gray-100 to-gray-200" />
+            // Show PDF badge if there is a PDF, else neutral gradient
+            firstPdfFile ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                <div className="flex items-center gap-2 text-gray-700 bg-white/80 rounded-md px-3 py-1.5 border">
+                  <FileImage className="w-4 h-4" />
+                  <span className="text-xs font-semibold">PDF Preview</span>
+                </div>
+              </div>
+            ) : (
+              <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-gray-100 to-gray-200" />
+            )
           )}
 
           {/* Common gradient overlay */}
@@ -411,35 +427,43 @@ export default function ResourceCard({
 
           {/* Buttons row */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              {/* Vote buttons perform voting action on all pages */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleVote(1)}
-                disabled={votingLoading}
-                className={`p-1 h-7 w-7 ${localVote === 1 ? 'text-green-600' : ''}`}
-              >
-                <ArrowUp className="w-3 h-3" />
-              </Button>
-              <span className="font-medium text-sm min-w-[1.5rem] text-center">
+          <div className="flex items-center gap-1">
+            {/* Hide vote controls when logged out or on own resource */}
+            {currentUserId && resource.uploader?.id !== currentUserId ? (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleVote(1)}
+                  disabled={votingLoading}
+                  className={`p-1 h-7 w-7 ${localVote === 1 ? 'text-green-600' : ''}`}
+                >
+                  <ArrowUp className="w-3 h-3" />
+                </Button>
+                <span className="font-medium text-sm min-w-[1.5rem] text-center">
+                  {localCount}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleVote(-1)}
+                  disabled={votingLoading}
+                  className={`p-1 h-7 w-7 ${localVote === -1 ? 'text-red-600' : ''}`}
+                >
+                  <ArrowDown className="w-3 h-3" />
+                </Button>
+              </>
+            ) : (
+              <span className="font-medium text-sm min-w-[1.5rem] text-center text-gray-600">
                 {localCount}
               </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleVote(-1)}
-                disabled={votingLoading}
-                className={`p-1 h-7 w-7 ${localVote === -1 ? 'text-red-600' : ''}`}
-              >
-                <ArrowDown className="w-3 h-3" />
-              </Button>
-              <Button variant="ghost" size="sm" asChild className="p-1 h-7">
-                <Link href={`/resource/${resource.id}#comments`}>
-                  <MessageCircle className="w-3 h-3" />
-                </Link>
-              </Button>
-            </div>
+            )}
+            <Button variant="ghost" size="sm" asChild className="p-1 h-7">
+              <Link href={`/resource/${resource.id}#comments`}>
+                <MessageCircle className="w-3 h-3" />
+              </Link>
+            </Button>
+          </div>
             {/* Three-dot menu for owned posts */}
             {showDeleteOption && currentUserId && resource.uploader?.id === currentUserId && onDelete && (
               <DropdownMenu>

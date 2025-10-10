@@ -83,7 +83,7 @@ export default function Navigation() {
         <div className="flex justify-between items-center h-16 sm:h-18">
           {/* Logo - Always show full name */}
           <div className="flex items-center flex-shrink-0">
-            <Link href="/" className="flex items-center space-x-2 group" aria-label="StudyShare Home">
+            <Link href="/" className="flex items-center space-x-2 group" aria-label="Study Share Home">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black p-1.5 sm:p-2 shadow-md transition-all duration-200 group-hover:scale-110 group-hover:shadow-lg flex items-center justify-center" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="white" className="w-full h-full">
                   <path d="M12 3L1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
@@ -202,7 +202,7 @@ export default function Navigation() {
                         </div>
                         <div className="text-center">
                           <DialogTitle className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
-                            Welcome to StudyShare
+                            Welcome to Study Share
                           </DialogTitle>
                           <p className="text-sm text-gray-600">Sign in to access your study materials</p>
                         </div>

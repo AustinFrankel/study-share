@@ -1,0 +1,19 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3000",
+  "backendAuthType": "basic token",
+  "backendUsername": "Austin",
+  "backendPassword": "Austin11!",
+  "executionArgs": {
+    "projectName": "AnswersHelp",
+    "projectPath": "/Users/austinfrankel/Downloads/AnswersHelp",
+    "testIds": [],
+    "additionalInstruction": "Use the existing code_summary.json at testsprite_tests/tmp/code_summary.json. Assume dev server at http://localhost:3000. If dev server is not reachable, still produce the report using static analysis and mark URL-dependent checks as skipped.",
+    "envs": {
+      "API_KEY": "sk-user-OAdA_nH4i-2XT--vtpeMVGUeVOnrwIjG73CZ4cM2Euf9IoSxDtyTn_VX-82MBqvY9uTF7NOoGsM_8hdHqU5OpI_v-NInl4_CAUtjbmmx1rO9jc1anGLXSJyWbTWJE6BoL1g"
+    }
+  },
+  "proxy": "http://994c04e1-b3be-4730-969b-ea8b04e0688b:1Jrc2dsthHUTRkXcn20HKGqj0yu6yuXG@tun.testsprite.com:8080"
+}

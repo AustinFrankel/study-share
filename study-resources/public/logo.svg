@@ -1,3 +1,38 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-  <path d="M12 3L1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="60" fill="#1a1a1a"/>
+  
+  <!-- AI Brain/Neural Network Icon -->
+  <g fill="white">
+    <!-- Main brain shape -->
+    <path d="M45 45c0-8.3 6.7-15 15-15s15 6.7 15 15c0 5.5-3 10.3-7.5 12.9v4.1c4.5 2.6 7.5 7.4 7.5 12.9 0 8.3-6.7 15-15 15s-15-6.7-15-15c0-5.5 3-10.3 7.5-12.9v-4.1C48 55.3 45 50.5 45 45z"/>
+    
+    <!-- Neural network nodes -->
+    <circle cx="50" cy="50" r="3" fill="#3b82f6"/>
+    <circle cx="70" cy="50" r="3" fill="#3b82f6"/>
+    <circle cx="50" cy="70" r="3" fill="#3b82f6"/>
+    <circle cx="70" cy="70" r="3" fill="#3b82f6"/>
+    <circle cx="60" cy="60" r="4" fill="#10b981"/>
+    
+    <!-- Connection lines -->
+    <line x1="50" y1="50" x2="60" y2="60" stroke="#3b82f6" stroke-width="2"/>
+    <line x1="70" y1="50" x2="60" y2="60" stroke="#3b82f6" stroke-width="2"/>
+    <line x1="50" y1="70" x2="60" y2="60" stroke="#3b82f6" stroke-width="2"/>
+    <line x1="70" y1="70" x2="60" y2="60" stroke="#3b82f6" stroke-width="2"/>
+  </g>
+  
+  <!-- Test/Quiz elements -->
+  <g fill="#f59e0b">
+    <!-- Document/Test paper -->
+    <rect x="35" y="35" width="12" height="16" rx="2" fill="white"/>
+    <rect x="37" y="37" width="8" height="1" fill="#f59e0b"/>
+    <rect x="37" y="39" width="6" height="1" fill="#f59e0b"/>
+    <rect x="37" y="41" width="7" height="1" fill="#f59e0b"/>
+    <rect x="37" y="43" width="5" height="1" fill="#f59e0b"/>
+  </g>
+  
+  <!-- Checkmark for success/test completion -->
+  <g fill="#10b981">
+    <path d="M75 40l8 8-16 16-8-8 2.8-2.8L75 40z"/>
+  </g>
 </svg>

@@ -43,7 +43,7 @@ export default function ResourcePage() {
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [showOriginal, setShowOriginal] = useState(false)
+  const [showOriginal, setShowOriginal] = useState(true)
   const [votingLoading, setVotingLoading] = useState(false)
   const [accessBlocked, setAccessBlocked] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -711,60 +711,25 @@ export default function ResourcePage() {
 
     setDeleting(true)
     try {
-      // Try to remove storage objects first (best-effort)
-      try {
-        const { data: fileRows } = await supabase
-          .from('files')
-          .select('path, storage_path')
-          .eq('resource_id', resourceId)
-        const paths = (fileRows || [])
-          .map((f: { path?: string; storage_path?: string }) => f?.path || f?.storage_path)
-          .filter((path: string | undefined): path is string => Boolean(path))
-        if (paths.length > 0) {
-          await supabase.storage.from('resources').remove(paths)
-        }
-      } catch (storageErr) {
-        console.warn('Storage cleanup failed (non-critical):', storageErr)
+      // Delegate deletion to server route that fully cleans up
+      const resp = await fetch(`/api/resource/${resourceId}/delete`, { method: 'DELETE' })
+      if (!resp.ok) {
+        const { error } = await resp.json().catch(() => ({ error: 'Delete failed' }))
+        throw new Error(error)
       }
 
-      // Clean up child table rows (works even if CASCADE not present). Ignore failures.
-      try { await supabase.from('files').delete().eq('resource_id', resourceId) } catch {}
-      try { await supabase.from('ai_derivatives').delete().eq('resource_id', resourceId) } catch {}
-      try { await supabase.from('resource_tags').delete().eq('resource_id', resourceId) } catch {}
-      try { await supabase.from('votes').delete().eq('resource_id', resourceId) } catch {}
-      try { await supabase.from('flags').delete().eq('resource_id', resourceId) } catch {}
-      // Comments may be owned by others; if CASCADE is not set this could fail; handled by migration.
-
-      // Delete the resource
-      const { error } = await supabase
-        .from('resources')
-        .delete()
-        .eq('id', resourceId)
-        .eq('uploader_id', user.id) // Additional safety check
-
-      if (error) throw error
-
-      // Remove points associated with the resource
+      // Log activity (best-effort)
       try {
-        await supabase.from('points_ledger')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('resource_id', resourceId)
-      } catch (pointsError) {
-        console.warn('Failed to remove points (non-critical):', pointsError)
-      }
-      
-      // Log activity
-      await logActivity({
-        userId: user.id,
-        action: 'delete',
-        resourceId: resourceId,
-        resourceTitle: resource.title,
-        pointsChange: -1,
-        metadata: { deleted_from: 'resource_page' }
-      })
+        await logActivity({
+          userId: user.id,
+          action: 'delete',
+          resourceId: resourceId,
+          resourceTitle: resource.title,
+          pointsChange: -1,
+          metadata: { deleted_from: 'resource_page' }
+        })
+      } catch {}
 
-      // Navigate back to profile without full page reload
       router.push('/profile')
     } catch (error) {
       console.error('Error deleting resource:', error)

@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!isSupabaseConfigured) {
     return {
       title: 'Study Resource',
-      description: 'View this study resource on StudyShare',
+      description: 'View this study resource on Study Share',
     }
   }
 
@@ -48,7 +48,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     if (error || !resource) {
       return {
-        title: 'Resource Not Found | StudyShare',
+        title: 'Resource Not Found | Study Share - AI-Powered Test Hub',
         description: 'The requested study resource could not be found.',
       }
     }
@@ -68,7 +68,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? `Rated ${resource.average_rating?.toFixed(1)}/5 by ${resource.rating_count} students. `
       : ''
 
-    const description = `${subtitle}${uploaderInfo}${schoolInfo}${ratingInfo}Access this ${resourceType.toLowerCase()} and more study materials on StudyShare.`
+    const description = `${subtitle}${uploaderInfo}${schoolInfo}${ratingInfo}Access this ${resourceType.toLowerCase()} and more study materials on Study Share.`
 
     // Get first image file for OG image if available
     const imageFile = resource.files?.find((f: any) => f.mime?.startsWith('image/'))
@@ -91,7 +91,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         resource.class?.teacher?.name || ''
       ].filter(Boolean),
       openGraph: {
-        title: resource.title,
+        title: `${resource.title} | Study Share - AI-Powered Test Hub`,
         description: subtitle || `${resourceType} for ${className}`,
         url: `/resource/${id}`,
         type: 'article',
@@ -101,12 +101,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           height: 630,
           alt: `${resource.title} - ${className}`
         }],
-        siteName: 'StudyShare',
+        siteName: 'Study Share',
         publishedTime: resource.created_at,
       },
       twitter: {
         card: 'summary_large_image',
-        title: resource.title,
+        title: `${resource.title} | Study Share - AI-Powered Test Hub`,
         description: subtitle || `${resourceType} for ${className}`,
         images: [ogImage],
       },
@@ -117,8 +117,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   } catch (error) {
     console.error('Error generating metadata for resource:', error)
     return {
-      title: 'Study Resource | StudyShare',
-      description: 'View study resources and materials on StudyShare',
+      title: 'Study Resource | Study Share - AI-Powered Test Hub',
+      description: 'View study resources and materials on Study Share',
     }
   }
 }

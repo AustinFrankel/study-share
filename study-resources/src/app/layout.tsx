@@ -21,36 +21,33 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://studyshare.app'),
-  title: {
-    default: "StudyShare - Student Study Resources, Class Notes & Practice Questions",
-    template: "%s | StudyShare"
-  },
+  title: "Study Share",
   description: "Access student-shared study materials, class notes, and AI-generated practice questions for your courses. Join thousands of students sharing resources.",
   keywords: ["study resources", "class notes", "study guides", "practice questions", "student materials", "exam prep", "academic resources", "AI practice questions", "college notes", "university study materials"],
-  authors: [{ name: "StudyShare" }],
-  creator: "StudyShare",
-  publisher: "StudyShare",
+  authors: [{ name: "Study Share" }],
+  creator: "Study Share",
+  publisher: "Study Share",
   openGraph: {
     type: 'website',
     locale: 'en_US',
     url: '/',
-    siteName: 'StudyShare',
-    title: 'StudyShare - Student Study Resources & Class Notes',
+    siteName: 'Study Share',
+    title: 'Study Share - AI-Powered Test Hub',
     description: 'Share and discover study materials for your classes. Get AI-powered practice questions and connect with students in your courses.',
     images: [{
-      url: '/og-image.svg',
+      url: '/logo.svg',
       width: 1200,
-      height: 630,
-      alt: 'StudyShare - Collaborative Student Study Platform',
+      height: 1200,
+      alt: 'Study Share',
       type: 'image/svg+xml'
     }]
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'StudyShare - Student Study Resources',
+    title: 'Study Share - AI-Powered Test Hub',
     description: 'Share and discover study materials for your classes',
-    images: ['/twitter-image.svg'],
-    creator: '@studyshare'
+    images: ['/logo.svg'],
+    creator: '@aipoweredtesthub'
   },
   robots: {
     index: true,
@@ -65,6 +62,15 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: '/'
+  },
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml', sizes: 'any' }
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
+    ],
+    shortcut: '/favicon.svg'
   }
 };
 
@@ -87,13 +93,13 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Organization",
-              "name": "StudyShare",
+              "name": "Study Share",
               "url": process.env.NEXT_PUBLIC_SITE_URL || "https://studyshare.app",
               "logo": `${process.env.NEXT_PUBLIC_SITE_URL || "https://studyshare.app"}/logo.png`,
               "description": "Collaborative platform for students to share and discover study materials, class notes, and practice questions.",
               "sameAs": [
-                "https://twitter.com/studyshare",
-                "https://instagram.com/studyshare"
+                "https://twitter.com/aipoweredtesthub",
+                "https://instagram.com/aipoweredtesthub"
               ]
             })
           }}
@@ -127,7 +133,7 @@ export default function RootLayout({
               dangerouslySetInnerHTML={{
                 __html: `
                   window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
+                  function gtag(){dataLayer.push(arguments);} 
                   gtag('js', new Date());
                   gtag('config', '${gaId}');
                 `,

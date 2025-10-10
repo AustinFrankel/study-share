@@ -73,9 +73,9 @@ export default function StarRating({
               <Star
                 className={cn(
                   "w-5 h-5 transition-colors",
-                  isFilled 
-                    ? "text-yellow-400 fill-yellow-400" 
-                    : "text-gray-400 hover:text-yellow-300",
+                  isFilled
+                    ? "text-yellow-400 fill-yellow-400"
+                    : "text-gray-300",
                   isInteractive && hoveredRating >= star && "text-yellow-400 fill-yellow-400"
                 )}
                 strokeWidth={2.5}

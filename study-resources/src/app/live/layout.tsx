@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "Track SAT, ACT, PSAT, and AP exam dates with live countdowns. Join waitlists for practice materials and get notified when test resources are available.",
   keywords: ["SAT countdown", "ACT test dates", "AP exam dates", "PSAT countdown", "exam timer", "test date tracker", "standardized test calendar", "SAT practice", "ACT prep", "AP exam prep"],
   openGraph: {
-    title: "SAT, ACT & AP Exam Countdown Timer | Test Date Tracker 2025",
+    title: "SAT, ACT & AP Exam Countdown Timer | Test Date Tracker 2025 | Study Share - AI-Powered Test Hub",
     description: "Track SAT, ACT, PSAT, and AP exam dates with live countdowns. Join waitlists for practice materials.",
     url: `${siteUrl}/live`,
     type: 'website',
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: "SAT, ACT & AP Exam Countdown Timer | StudyShare",
+    title: "SAT, ACT & AP Exam Countdown Timer | Study Share - AI-Powered Test Hub",
     description: "Track SAT, ACT, PSAT, and AP exam dates with live countdowns.",
     images: [`${siteUrl}/twitter-live.png`]
   },

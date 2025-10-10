@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,7 @@ function SearchBarContent({ placeholder = "Search by class or teacher...", class
   const router = useRouter()
   const searchParams = useSearchParams()
   const [query, setQuery] = useState(searchParams.get('q') || '')
+  const debounceRef = useRef<number | null>(null)
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,6 +23,20 @@ function SearchBarContent({ placeholder = "Search by class or teacher...", class
       router.push(`/search?q=${encodeURIComponent(query.trim())}`)
     }
   }
+
+  // Real-time navigation with debounce (non-intrusive, no inline autocompletion)
+  useEffect(() => {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current)
+    debounceRef.current = window.setTimeout(() => {
+      const q = query.trim()
+      if (q.length > 1) {
+        router.replace(`/search?q=${encodeURIComponent(q)}`)
+      }
+    }, 250)
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current)
+    }
+  }, [query, router])
 
   return (
     <form onSubmit={handleSearch} className={`flex gap-2 sm:gap-3 ${className}`} role="search" aria-label="Search study resources">

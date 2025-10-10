@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "Find study resources from students at top universities. Filter by school, subject, teacher, difficulty, and resource type. Access thousands of class-specific materials.",
   keywords: ["browse study resources", "university study materials", "college notes by school", "filter class notes", "study materials by teacher", "academic resources by subject"],
   openGraph: {
-    title: "Browse Study Resources by School, Subject & Teacher | StudyShare",
+    title: "Browse Study Resources by School, Subject & Teacher | Study Share - AI-Powered Test Hub",
     description: "Find study resources from students at top universities. Filter by school, subject, teacher, difficulty, and resource type.",
     url: `${siteUrl}/browse`,
     type: 'website',
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: "Browse Study Resources by School, Subject & Teacher | StudyShare",
+    title: "Browse Study Resources by School, Subject & Teacher | Study Share - AI-Powered Test Hub",
     description: "Find study resources from students at top universities. Filter by school, subject, and teacher.",
     images: [`${siteUrl}/twitter-browse.png`]
   },

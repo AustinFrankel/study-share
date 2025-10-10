@@ -1,5 +1,5 @@
 {
-  "name": "study-share-root",
+  "name": "ai-powered-test-hub-root",
   "private": true,
   "scripts": {
     "vercel-build": "npm --prefix study-resources run build",

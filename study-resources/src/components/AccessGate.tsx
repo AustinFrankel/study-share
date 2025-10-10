@@ -121,9 +121,9 @@ export default function AccessGate({ onAccessGranted, resourceId }: AccessGatePr
         </CardHeader>
         <CardContent className="space-y-5 pt-5">
           <div className="space-y-2">
-            <div className="flex justify-between text-sm text-amber-900/90 font-medium">
+            <div className="flex items-center justify-between text-sm text-amber-900/90 font-medium">
               <span>Views used this month</span>
-              <span>{viewsUsed} / {maxViews}</span>
+              <span className="font-semibold">{viewsUsed} / {maxViews}</span>
             </div>
             <Progress value={Math.min(100, Math.round((viewsUsed / Math.max(1, maxViews)) * 100))} className="bg-amber-100" />
           </div>
@@ -131,7 +131,7 @@ export default function AccessGate({ onAccessGranted, resourceId }: AccessGatePr
           <Alert className="bg-white/70 border-amber-200">
             <Clock className="h-4 w-4 text-amber-700" />
             <AlertDescription className="text-amber-900/90">
-              Resets in {resetIn}
+              Resets in {resetIn}. Upload resources or watch a short ad to get more views.
             </AlertDescription>
           </Alert>
 

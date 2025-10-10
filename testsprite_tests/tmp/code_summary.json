@@ -1,0 +1,174 @@
+{
+  "tech_stack": [
+    "TypeScript",
+    "Next.js 15 (App Router, Turbopack)",
+    "React 19",
+    "Tailwind CSS 4",
+    "Supabase (Postgres, Auth, Storage)",
+    "Node.js 20",
+    "Vercel"
+  ],
+  "features": [
+    {
+      "name": "File Download",
+      "description": "Fetch binary file content by id; returns image or binary with appropriate headers and graceful SVG placeholder when missing.",
+      "files": [
+        "study-resources/src/app/api/file/[id]/route.ts"
+      ],
+      "api_doc": {
+        "openapi": "3.0.3",
+        "info": { "title": "File Download API", "version": "1.0.0" },
+        "servers": [ { "url": "http://localhost:3000" } ],
+        "paths": {
+          "/api/file/{id}": {
+            "get": {
+              "summary": "Get file binary by id",
+              "parameters": [
+                { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Binary file content",
+                  "content": {
+                    "image/*": { "schema": { "type": "string", "format": "binary" } },
+                    "application/octet-stream": { "schema": { "type": "string", "format": "binary" } }
+                  }
+                },
+                "400": { "description": "Bad request", "content": { "application/json": { "schema": { "type": "object", "properties": { "error": { "type": "string" } } } } } },
+                "404": { "description": "Not found", "content": { "application/json": { "schema": { "type": "object", "properties": { "error": { "type": "string" } } } } } },
+                "500": { "description": "Internal error", "content": { "application/json": { "schema": { "type": "object", "properties": { "error": { "type": "string" } } } } } }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "File Text Content",
+      "description": "Return text content for text-like files (txt, md, json, etc.).",
+      "files": [
+        "study-resources/src/app/api/file/[id]/content/route.ts"
+      ],
+      "api_doc": {
+        "openapi": "3.0.3",
+        "info": { "title": "File Text Content API", "version": "1.0.0" },
+        "servers": [ { "url": "http://localhost:3000" } ],
+        "paths": {
+          "/api/file/{id}/content": {
+            "get": {
+              "summary": "Get text content for a file by id",
+              "parameters": [
+                { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Text content",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "content": { "type": "string" },
+                          "filename": { "type": "string" },
+                          "mime": { "type": "string" }
+                        },
+                        "required": ["content"]
+                      }
+                    }
+                  }
+                },
+                "400": { "description": "Not a text file", "content": { "application/json": { "schema": { "type": "object", "properties": { "error": { "type": "string" } } } } } },
+                "404": { "description": "Not found in storage", "content": { "application/json": { "schema": { "type": "object", "properties": { "error": { "type": "string" } } } } } },
+                "500": { "description": "Internal error", "content": { "application/json": { "schema": { "type": "object", "properties": { "error": { "type": "string" } } } } } }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Ensure User",
+      "description": "Authenticate (Bearer or Supabase cookies) and create a user row if missing; returns the user.",
+      "files": [
+        "study-resources/src/app/api/ensure-user/route.ts"
+      ],
+      "api_doc": {
+        "openapi": "3.0.3",
+        "info": { "title": "Ensure User API", "version": "1.0.0" },
+        "servers": [ { "url": "http://localhost:3000" } ],
+        "components": {
+          "securitySchemes": {
+            "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" },
+            "cookieAuth": { "type": "apiKey", "in": "cookie", "name": "sb-access-token" }
+          }
+        },
+        "paths": {
+          "/api/ensure-user": {
+            "post": {
+              "summary": "Ensure a user exists",
+              "security": [ { "bearerAuth": [] }, { "cookieAuth": [] } ],
+              "responses": {
+                "200": {
+                  "description": "User exists/created",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "ok": { "type": "boolean" },
+                          "user": {
+                            "type": "object",
+                            "properties": {
+                              "id": { "type": "string" },
+                              "handle": { "type": "string" },
+                              "handle_version": { "type": "number" }
+                            }
+                          },
+                          "error": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                },
+                "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "type": "object", "properties": { "error": { "type": "string" } } } } } },
+                "500": { "description": "Database/Internal error", "content": { "application/json": { "schema": { "type": "object", "properties": { "error": { "type": "string" } } } } } }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Delete Resource",
+      "description": "Delete a resource and related storage/rows by id.",
+      "files": [
+        "study-resources/src/app/api/resource/[id]/delete/route.ts"
+      ],
+      "api_doc": {
+        "openapi": "3.0.3",
+        "info": { "title": "Delete Resource API", "version": "1.0.0" },
+        "servers": [ { "url": "http://localhost:3000" } ],
+        "paths": {
+          "/api/resource/{id}/delete": {
+            "delete": {
+              "summary": "Delete a resource by id",
+              "parameters": [
+                { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Deleted",
+                  "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" } } } } }
+                },
+                "400": { "description": "Bad request", "content": { "application/json": { "schema": { "type": "object", "properties": { "error": { "type": "string" } } } } } },
+                "500": { "description": "Internal error", "content": { "application/json": { "schema": { "type": "object", "properties": { "error": { "type": "string" } } } } } }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
+
+

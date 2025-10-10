@@ -349,9 +349,9 @@ function HomeContent() {
         <div className="text-center mb-5 sm:mb-6 md:mb-8">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 sm:mb-3 px-2 leading-tight">
             <span className="align-middle inline-flex items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.svg" alt="StudyShare" className="h-8 sm:h-10 md:h-12" />
-              <span>for Your Classes</span>
+              <span>
+                Study <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-purple-700 bg-clip-text text-transparent">Smart</span> for Your Classes
+              </span>
             </span>
           </h1>
           

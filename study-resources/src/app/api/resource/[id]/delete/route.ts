@@ -56,6 +56,16 @@ export async function DELETE(
       return NextResponse.json({ error: resErr.message || 'Failed to delete resource' }, { status: 500 })
     }
 
+    // Best-effort: remove any remaining storage artifacts by prefix
+    try {
+      const prefix = `${resourceId}/`
+      const list = await supabase.storage.from('resources').list(prefix, { limit: 1000 })
+      const leftovers = (list.data || []).map((f: any) => `${prefix}${f.name}`)
+      if (leftovers.length > 0) {
+        try { await supabase.storage.from('resources').remove(leftovers) } catch {}
+      }
+    } catch {}
+
     return NextResponse.json({ success: true })
   } catch (e: any) {
     const message = e?.message || 'Internal server error'

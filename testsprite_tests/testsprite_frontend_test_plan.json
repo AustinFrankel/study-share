@@ -1,0 +1,525 @@
+[
+  {
+    "id": "TC001",
+    "title": "Load Available Practice Tests",
+    "description": "Verify that the student can load the /live page and see all available practice tests categorized by type (SAT, ACT, PSAT, AP) and status color codes.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the /live page as a logged-in student"
+      },
+      {
+        "type": "assertion",
+        "description": "Check that the page displays tests grouped by exam type"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify status color codes are visible and correctly represent test statuses"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm that each test entry displays relevant metadata such as test name and availability"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Join Waitlist and Receive Confirmation",
+    "description": "Ensure that a student can submit their email to join the waitlist for an upcoming test and receive a confirmation toast.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a waitlist join section on /live page"
+      },
+      {
+        "type": "action",
+        "description": "Enter a valid email address in the waitlist form"
+      },
+      {
+        "type": "action",
+        "description": "Submit the waitlist form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a confirmation toast appears indicating successful waitlist registration"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the email is recorded in the waitlist database via admin dashboard or Supabase"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Receive Notification Email When Test Becomes Available",
+    "description": "Verify that students on the waitlist receive notification emails when the test they subscribed for becomes available.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Simulate test availability triggering notification events for waitlist emails"
+      },
+      {
+        "type": "assertion",
+        "description": "Check that the student receives an email notification for the test availability"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm the email contains valid test information and a link to /live"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Load and Start a Timed Test",
+    "description": "Verify a student can initiate loading a timed practice test and enter the test environment with an active countdown timer.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the /live page and select an available test"
+      },
+      {
+        "type": "action",
+        "description": "Click on 'Start Test' button to begin"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the test interface mimics College Board Bluebook style"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm the test timer countdown starts accurately and is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Check that modular question navigation is accessible"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Answer Questions with Instant Feedback",
+    "description": "Check that selecting answers triggers instant feedback showing correct/incorrect indicators and detailed explanations.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "During the timed test, select a correct answer for a question"
+      },
+      {
+        "type": "assertion",
+        "description": "Instant feedback appears showing the answer is correct with explanation"
+      },
+      {
+        "type": "action",
+        "description": "Select an incorrect answer for the next question"
+      },
+      {
+        "type": "assertion",
+        "description": "Instant feedback appears showing the answer is incorrect with explanation"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Use Professional Testing Tools",
+    "description": "Verify that the floating calculator, text highlighter, answer eliminator, and flag system function correctly during a test.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open a test and access the floating calculator"
+      },
+      {
+        "type": "assertion",
+        "description": "Calculator accepts inputs and performs calculations correctly"
+      },
+      {
+        "type": "action",
+        "description": "Highlight text in a question using the text highlighter tool"
+      },
+      {
+        "type": "assertion",
+        "description": "Highlighted text is visibly marked and persists during navigation"
+      },
+      {
+        "type": "action",
+        "description": "Use answer eliminator to strike out one or more incorrect choices"
+      },
+      {
+        "type": "assertion",
+        "description": "Eliminated answers are visually distinct and can be toggled"
+      },
+      {
+        "type": "action",
+        "description": "Flag a question for review"
+      },
+      {
+        "type": "assertion",
+        "description": "Flag icon appears and question is listed in flagged questions module"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Auto-Save and Resume Test Progress",
+    "description": "Verify test progress and answers are auto-saved periodically and the student can resume an in-progress test after closing or refreshing.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Start a timed test and answer several questions"
+      },
+      {
+        "type": "action",
+        "description": "Refresh the browser or close and reopen the test page"
+      },
+      {
+        "type": "assertion",
+        "description": "Test resumes at the last saved question with prior answers intact"
+      },
+      {
+        "type": "assertion",
+        "description": "Test timer resumes with the correct remaining time"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Automatic Test Submission On Timer Expiry",
+    "description": "Ensure that the test auto-submits when the countdown timer reaches zero and displays results.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Start a timed test and wait until the timer expires"
+      },
+      {
+        "type": "assertion",
+        "description": "Test automatically submits answers without user intervention"
+      },
+      {
+        "type": "assertion",
+        "description": "Results page displays overall score, time taken, and detailed answer explanations"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Admin Upload Test Content via JSON",
+    "description": "Verify that an admin can upload test content manually using a JSON file and the upload progress and results are correctly displayed.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as admin and navigate to /live/upload"
+      },
+      {
+        "type": "action",
+        "description": "Select and upload a valid test JSON file"
+      },
+      {
+        "type": "assertion",
+        "description": "Upload progress indicator appears and advances correctly"
+      },
+      {
+        "type": "assertion",
+        "description": "On successful upload, the newly uploaded test is visible in the test list"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Admin Upload Test Content via OCR Images",
+    "description": "Verify that an admin can upload test content using OCR processed images and the content is parsed and saved correctly.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as admin and navigate to /live/upload"
+      },
+      {
+        "type": "action",
+        "description": "Upload image files for OCR processing"
+      },
+      {
+        "type": "assertion",
+        "description": "OCR processing progress and status indicators display correctly"
+      },
+      {
+        "type": "assertion",
+        "description": "Extracted test content appears as expected and is saved to database"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Secure Authentication with Supabase Auth",
+    "description": "Test that users authenticate using Supabase Auth with bearer tokens or cookies and unauthorized access is prevented.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to access protected resources without authentication"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is denied with 401 Unauthorized responses"
+      },
+      {
+        "type": "action",
+        "description": "Log in with valid credentials and obtain bearer token"
+      },
+      {
+        "type": "action",
+        "description": "Access protected endpoints with bearer token or cookies"
+      },
+      {
+        "type": "assertion",
+        "description": "Access is granted and user data is returned"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Unauthorized Access is Blocked",
+    "description": "Verify that users cannot access or modify test data or user progress without proper authorization, enforcing RLS policies.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to fetch or modify test data for another user"
+      },
+      {
+        "type": "assertion",
+        "description": "Access is denied and appropriate error message is returned"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to access admin upload endpoints as a non-admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Access is forbidden or unauthorized"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Responsive Layout and Accessibility",
+    "description": "Verify that the platform's UI is responsive and accessible across mobile, tablet, desktop, and 4K displays, including keyboard navigation and screen reader compatibility.",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Access the platform on various devices and screen sizes"
+      },
+      {
+        "type": "assertion",
+        "description": "UI elements adjust properly without distortion or overlap"
+      },
+      {
+        "type": "action",
+        "description": "Navigate through the test using keyboard only"
+      },
+      {
+        "type": "assertion",
+        "description": "All interactive elements are reachable and operable via keyboard"
+      },
+      {
+        "type": "action",
+        "description": "Test with a screen reader to ensure text alternatives and aria labels exist"
+      },
+      {
+        "type": "assertion",
+        "description": "Content is read correctly and navigation is seamless"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Error Handling On API Failures",
+    "description": "Confirm that API failures are handled gracefully with user-friendly error messages and fallback to demo questions when applicable.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Simulate failure responses from file download or test resource APIs"
+      },
+      {
+        "type": "assertion",
+        "description": "Error messages inform the user about the issue clearly"
+      },
+      {
+        "type": "assertion",
+        "description": "Fallback demo questions load to allow uninterrupted practice"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Delete Resource API Security and Functionality",
+    "description": "Verify that deleting a resource by id requires proper authorization and deletes related data and storage entries without errors.",
+    "category": "security",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to delete a resource as an unauthorized user"
+      },
+      {
+        "type": "assertion",
+        "description": "Deletion is denied with security error"
+      },
+      {
+        "type": "action",
+        "description": "Perform deletion request as an authorized admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Resource and related storage/rows are removed successfully"
+      },
+      {
+        "type": "action",
+        "description": "Verify resource is no longer accessible from the application"
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Accurate User Progress Tracking and Analytics",
+    "description": "Verify all user test activities including answers, progress, and final results are logged accurately in Supabase tables for analytics.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Complete tests with multiple modules and varied answer selections"
+      },
+      {
+        "type": "assertion",
+        "description": "Check the Supabase database tables to confirm all answer data and timing information is logged"
+      },
+      {
+        "type": "assertion",
+        "description": "Admin dashboard or analytics module displays correct summarized data"
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "File Download API Success and Error Responses",
+    "description": "Test the file download API with valid and invalid ids to confirm correct binary content is returned or appropriate error responses.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send GET request to /api/file/{valid_id}"
+      },
+      {
+        "type": "assertion",
+        "description": "Response returns image or binary data with appropriate headers"
+      },
+      {
+        "type": "action",
+        "description": "Send GET request with invalid or missing id"
+      },
+      {
+        "type": "assertion",
+        "description": "400 or 404 error response with JSON error message is returned"
+      },
+      {
+        "type": "action",
+        "description": "Simulate internal server error scenario"
+      },
+      {
+        "type": "assertion",
+        "description": "500 error response with JSON error message is returned"
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "File Text Content API with Text and Non-Text Files",
+    "description": "Verify that the file text content API returns text for text-like files and returns errors for binary files accordingly.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Request text content for a .txt or .json file via /api/file/{id}/content"
+      },
+      {
+        "type": "assertion",
+        "description": "API responds with JSON containing file content, filename, and mime type"
+      },
+      {
+        "type": "action",
+        "description": "Request text content for a binary/image file"
+      },
+      {
+        "type": "assertion",
+        "description": "API responds with 400 error indicating not a text file"
+      },
+      {
+        "type": "action",
+        "description": "Request content for non-existent file id"
+      },
+      {
+        "type": "assertion",
+        "description": "404 error response with appropriate message is returned"
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "Ensure User API on Authentication",
+    "description": "Test that the ensure-user API authenticates via bearer token or cookies and creates a user record if missing, returning the user object.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send POST request to /api/ensure-user without auth"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 401 Unauthorized response is returned"
+      },
+      {
+        "type": "action",
+        "description": "Send POST request with valid bearer token or cookie"
+      },
+      {
+        "type": "assertion",
+        "description": "User object is returned with id, handle, and handle_version"
+      },
+      {
+        "type": "action",
+        "description": "Send POST request for a new user (no existing user row)"
+      },
+      {
+        "type": "assertion",
+        "description": "User row is created and returned successfully"
+      }
+    ]
+  }
+]
