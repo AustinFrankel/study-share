@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Upload, Lock } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { signInWithEmail, signInWithGoogle, signOut } from '@/lib/auth'
-import dynamic from 'next/dynamic'
-const PhoneAuth = dynamic(() => import('@/components/PhoneAuth'), { ssr: false })
+import dynamicImport from 'next/dynamic'
+const PhoneAuth = dynamicImport(() => import('@/components/PhoneAuth'), { ssr: false })
 
 export default function UploadPage() {
   const { user, loading, session } = useAuth()
