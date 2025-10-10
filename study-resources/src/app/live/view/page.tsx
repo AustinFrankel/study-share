@@ -130,6 +130,17 @@ function LiveViewContent() {
   // Provide a small built-in SAT text fallback the user supplied so the Live section works immediately
   const buildSATFallback = (): Problem[] => {
     const t = (testId || '').toLowerCase()
+    // Allow special demo test id "test" to preview UI with 10 MC questions
+    if (t === 'test') {
+      const out: Problem[] = []
+      for (let i = 1; i <= 10; i++) {
+        out.push({
+          number: i,
+          content: `Question ${i}: Which option is correct?\nA) Option A\nB) Option B\nC) Option C\nD) Option D`
+        })
+      }
+      return out
+    }
     // Only use fallback for SAT tests to avoid polluting other exams
     if (!t.startsWith('sat-')) return []
 

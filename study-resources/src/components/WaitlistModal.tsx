@@ -109,7 +109,7 @@ export default function WaitlistModal({
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
                     <Star className="w-4 h-4 text-yellow-500" />
-                    Early access to practice questions
+                    Get extra predictions on real post-exam problems
                   </div>
                   <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
                     <Users className="w-4 h-4 text-blue-500" />

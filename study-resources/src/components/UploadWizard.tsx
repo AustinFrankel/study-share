@@ -134,7 +134,7 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
     }
   }
 
-  // Handle pending files from drag and drop
+  // Restore from sessionStorage when arriving via global drop and handle pending files
   useEffect(() => {
     console.log('UploadWizard: pendingFiles changed', {
       hasPendingFiles: !!pendingFiles,
@@ -144,6 +144,48 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
       processedIds: pendingFilesProcessedRef.current
     })
     
+    // Session restore: when coming from global drop, rebuild File objects from data URLs
+    // and inject them as if selected manually. This ensures previews and step auto-advance.
+    try {
+      const url = new URL(window.location.href)
+      const shouldRestore = url.searchParams.get('restore') === '1'
+      if (shouldRestore) {
+        const raw = sessionStorage.getItem('uploadQueueV1')
+        if (raw) {
+          const parsed = JSON.parse(raw) as { createdAt: number; items: Array<{ id: string; name: string; type: string; lastModified: number; dataUrl: string | null }> }
+          if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
+            const restored: UploadFile[] = []
+            parsed.items.forEach((it) => {
+              try {
+                if (!it.dataUrl) return
+                // Reconstruct a File from the data URL for consistent behavior
+                const arr = it.dataUrl.split(',')
+                const mime = arr[0].match(/:(.*?);/)?.[1] || it.type || 'application/octet-stream'
+                const bstr = atob(arr[1] || '')
+                let n = bstr.length
+                const u8arr = new Uint8Array(n)
+                while (n--) u8arr[n] = bstr.charCodeAt(n)
+                const file = new File([u8arr], it.name, { type: mime, lastModified: it.lastModified || Date.now() })
+                restored.push({ id: generateId(), file, progress: 0, uploaded: false })
+              } catch (e) {
+                console.warn('Failed to restore file from session:', e)
+              }
+            })
+            if (restored.length > 0) {
+              setFiles(prev => [...prev, ...restored])
+              // Clear query param so refresh does not keep restoring
+              url.searchParams.delete('restore')
+              window.history.replaceState({}, '', url.toString())
+              // Clear session storage after use
+              sessionStorage.removeItem('uploadQueueV1')
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('UploadWizard restore error:', e)
+    }
+
     if (pendingFiles && pendingFiles.length > 0) {
       // Check if we've already processed these exact files to prevent duplicates
       const unprocessedFiles = pendingFiles.filter(file => 
