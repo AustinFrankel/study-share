@@ -4,6 +4,7 @@ export interface User {
   handle_version: number
   created_at: string
   avatar_url?: string
+  email?: string
 }
 
 export interface School {

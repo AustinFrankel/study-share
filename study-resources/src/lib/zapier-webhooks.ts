@@ -59,7 +59,10 @@ export async function triggerUserSignup(user: {
   handle?: string
   created_at?: string
 }) {
-  const webhookUrl = process.env.ZAPIER_WEBHOOK_USER_SIGNUP
+  const webhookUrl =
+    typeof window === 'undefined'
+      ? process.env.ZAPIER_WEBHOOK_USER_SIGNUP
+      : process.env.NEXT_PUBLIC_ZAPIER_WEBHOOK_USER_SIGNUP
   if (!webhookUrl) {
     console.log('⚠️ ZAPIER_WEBHOOK_USER_SIGNUP not configured')
     return
@@ -69,6 +72,8 @@ export async function triggerUserSignup(user: {
   const waitlistPosition = Math.floor(Math.random() * 150) + 1 // Simulate waitlist position
   const estimatedAccess = new Date()
   estimatedAccess.setDate(estimatedAccess.getDate() + Math.floor(Math.random() * 7) + 1) // 1-7 days
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '')
 
   await sendZapierWebhook(webhookUrl, 'user.signup', {
     user_id: user.id,
@@ -91,8 +96,36 @@ export async function triggerUserSignup(user: {
     first_name: user.handle?.split('-')[0] || 'Student', // Extract first part of handle
     
     // Email content components
-    email_subject: `Welcome to Study Share - You're #${waitlistPosition} on the waitlist!`,
-    personalized_greeting: `Hi ${user.handle?.split('-')[0] || 'Student'}!`,
+    email_subject: `Welcome to Study Share – You're #${waitlistPosition} on the waitlist!`,
+    personalized_greeting: `Hi ${user.handle?.split('-')[0] || 'Student'},`,
+    email_text: [
+      `Welcome to Study Share!`,
+      '',
+      `You're currently position #${waitlistPosition} on our waitlist. Estimated access: ${estimatedAccess.toLocaleDateString()} (${Math.ceil((estimatedAccess.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days).`,
+      '',
+      'What is Study Share?',
+      'Study Share is an AI-powered test preparation platform where you can upload study materials, take practice tests with instant feedback, and collaborate with classmates.',
+      '',
+      'Quick links:',
+      `- Upload resources: ${siteUrl ? siteUrl + '/upload' : ''}`,
+      `- Practice tests: ${siteUrl ? siteUrl + '/live' : ''}`,
+      `- Profile: ${siteUrl ? siteUrl + '/profile' : ''}`
+    ].join('\n'),
+    email_html: `<!doctype html><html><body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:#111; line-height:1.5;">`
+      + `<p>Hi ${user.handle?.split('-')[0] || 'Student'},</p>`
+      + `<p>Welcome to Study Share!</p>`
+      + `<p>You're currently position <strong>#${waitlistPosition}</strong> on our waitlist.<br/>`
+      + `Estimated access: <strong>${estimatedAccess.toLocaleDateString()}</strong> `
+      + `(<strong>${Math.ceil((estimatedAccess.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days</strong>).</p>`
+      + `<h3 style="margin-top:20px;">Quick links</h3>`
+      + `<ul>`
+      + `<li><a href="${siteUrl ? siteUrl + '/upload' : '#'}">Upload resources</a></li>`
+      + `<li><a href="${siteUrl ? siteUrl + '/live' : '#'}">Practice tests</a></li>`
+      + `<li><a href="${siteUrl ? siteUrl + '/profile' : '#'}">Profile</a></li>`
+      + `</ul>`
+      + `<p>Good luck on your test! You've got this. 💪</p>`
+      + `<p>— The Study Share Team</p>`
+      + `</body></html>`,
   })
 }
 
@@ -108,11 +141,16 @@ export async function triggerUserUpload(user: {
   title: string
   file_count?: number
 }) {
-  const webhookUrl = process.env.ZAPIER_WEBHOOK_USER_UPLOAD
+  const webhookUrl =
+    typeof window === 'undefined'
+      ? process.env.ZAPIER_WEBHOOK_USER_UPLOAD
+      : process.env.NEXT_PUBLIC_ZAPIER_WEBHOOK_USER_UPLOAD
   if (!webhookUrl) {
     console.log('⚠️ ZAPIER_WEBHOOK_USER_UPLOAD not configured')
     return
   }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '')
 
   await sendZapierWebhook(webhookUrl, 'user.upload', {
     user_id: user.id,
@@ -121,6 +159,23 @@ export async function triggerUserUpload(user: {
     resource_id: resource.id,
     resource_title: resource.title,
     file_count: resource.file_count || 1,
+    resource_url: siteUrl ? `${siteUrl}/resource/${resource.id}` : undefined,
+    email_subject: `Your upload is live: ${resource.title}`,
+    personalized_greeting: `Hi ${user.handle?.split('-')[0] || 'Student'},`,
+    email_text: [
+      `Your upload is live!`,
+      '',
+      `Title: ${resource.title}`,
+      `Files: ${resource.file_count || 1}`,
+      siteUrl ? `View it here: ${siteUrl}/resource/${resource.id}` : ''
+    ].join('\n'),
+    email_html: `<!doctype html><html><body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:#111; line-height:1.5;">`
+      + `<p>Hi ${user.handle?.split('-')[0] || 'Student'},</p>`
+      + `<p>Your upload is live!</p>`
+      + `<p><strong>Title:</strong> ${resource.title}<br/><strong>Files:</strong> ${resource.file_count || 1}</p>`
+      + (siteUrl ? `<p><a href="${siteUrl}/resource/${resource.id}">View your resource</a></p>` : '')
+      + `<p>Thanks for contributing to Study Share.</p>`
+      + `</body></html>`,
   })
 }
 
@@ -137,7 +192,10 @@ export async function triggerTestCompleted(user: {
   score?: number
   total_questions?: number
 }) {
-  const webhookUrl = process.env.ZAPIER_WEBHOOK_TEST_COMPLETED
+  const webhookUrl =
+    typeof window === 'undefined'
+      ? process.env.ZAPIER_WEBHOOK_TEST_COMPLETED
+      : process.env.NEXT_PUBLIC_ZAPIER_WEBHOOK_TEST_COMPLETED
   if (!webhookUrl) {
     console.log('⚠️ ZAPIER_WEBHOOK_TEST_COMPLETED not configured')
     return

@@ -192,7 +192,7 @@ export async function getCurrentUser(): Promise<User | null> {
 
     if (userData) {
       console.log('✅ User data found in database')
-      return userData
+      return { ...userData, email: authUser.email }
     }
 
     // If user doesn't exist, call the ensure-user API endpoint to create it
@@ -240,7 +240,7 @@ export async function getCurrentUser(): Promise<User | null> {
       
       if (result.user) {
         console.log('✅ User created:', result.user.handle)
-        return result.user
+        return { ...result.user, email: authUser.email }
       }
       
       // If no user in response, try fetching once more
@@ -253,7 +253,7 @@ export async function getCurrentUser(): Promise<User | null> {
         3000
       )
       
-      return newUserData || null
+      return newUserData ? { ...newUserData, email: authUser.email } : null
     } catch (apiError) {
       console.error("❌ Error ensuring user via API:", apiError)
       
@@ -330,7 +330,7 @@ async function createUserDirectly(authUser: { id: string; email?: string }): Pro
 
     if (newUser) {
       console.log('✅ User created directly:', newUser.handle)
-      return newUser
+      return { ...newUser, email: authUser.email }
     } else {
       console.error('❌ No user data returned from insert')
       return null
