@@ -1,5 +1,19 @@
 // Real 2025-2026 test dates with exact times
 export const STANDARDIZED_TESTS_2025 = [
+  // Custom on-demand SAT entry for admin-created practice content
+  // Placed within the 31-day window so it shows at the very top under "Active Tests"
+  {
+    id: 'test',
+    name: 'SAT',
+    fullName: 'test',
+    // Set ~31 days from Oct 11, 2025 so it remains in the active window and sorts to top
+    date: new Date('2025-11-11T08:00:00'),
+    description: 'Custom SAT practice content (admin uploaded)',
+    color: 'from-blue-500 to-blue-600',
+    icon: '📚',
+    category: 'College Admissions',
+    hasResources: true
+  },
   // 2025 SAT Dates
   {
     id: 'sat-aug-2025',
