@@ -41,7 +41,7 @@ interface UploadWizardProps {
 }
 
 export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {}) {
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const router = useRouter()
   const { pendingFiles, clearPendingFiles } = useUploadContext()
   const pendingFilesProcessedRef = useRef<string[]>([]) // Track processed pending files by ID
@@ -1268,7 +1268,7 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
         await triggerUserUpload(
           {
             id: user.id,
-            email: user.email,
+            email: session?.user?.email,
             handle: user.handle,
           },
           {
