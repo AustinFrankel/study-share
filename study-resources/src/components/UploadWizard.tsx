@@ -22,6 +22,7 @@ import { awardPoints } from '@/lib/gamification'
 import { logActivity } from '@/lib/activity'
 import { containsProfanity, sanitizeText } from '@/lib/profanity-filter'
 import { grantViewsForUpload } from '@/lib/access-gate'
+import { triggerUserUpload } from '@/lib/zapier-webhooks'
 // Use Web Crypto for UUIDs to avoid bundling server-only uuid in client
 const generateId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`
 import { useUploadContext } from '@/contexts/UploadContext'
@@ -1261,6 +1262,24 @@ export default function UploadWizard({ onUnsavedChanges }: UploadWizardProps = {
       await new Promise(resolve => setTimeout(resolve, 1000))
       
       console.log('Upload process completed successfully')
+      
+      // Trigger Zapier webhook for upload
+      try {
+        await triggerUserUpload(
+          {
+            id: user.id,
+            email: user.email,
+            handle: user.handle,
+          },
+          {
+            id: resource.id,
+            title: resource.title,
+            file_count: files.length,
+          }
+        )
+      } catch (webhookError) {
+        console.error('Zapier webhook error (non-critical):', webhookError)
+      }
       
       // Show success message on screen and redirect
       setUploadSuccessMessage(`🎉 Upload successful! Resource "${resource.title}" has been uploaded successfully and is now shareable with your classmates.`)

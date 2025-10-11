@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
+import { triggerUserSignup } from '@/lib/zapier-webhooks'
 // We intentionally do NOT use the service role here. RLS allows users to insert
 // their own row, so we rely on the authenticated SSR client.
 
@@ -174,6 +175,20 @@ export async function POST(request: Request) {
     }
 
     console.log('User created successfully:', newUser.id, newUser.handle)
+    
+    // Trigger Zapier webhook for new user signup
+    try {
+      await triggerUserSignup({
+        id: newUser.id,
+        email: user.email,
+        handle: newUser.handle,
+        created_at: newUser.created_at,
+      })
+    } catch (webhookError) {
+      // Don't block user creation if webhook fails
+      console.error('Zapier webhook error (non-critical):', webhookError)
+    }
+    
     return NextResponse.json({ ok: true, user: newUser })
   } catch (error) {
     console.error('Unexpected error in ensure-user:', error)

@@ -15,7 +15,10 @@
     "db:sql": "node study-resources/scripts/db-run-sql.js",
     "db:sql:file": "node study-resources/scripts/db-run-sql.js --file",
     "db:sql:stmt": "node study-resources/scripts/db-run-sql.js --sql",
-    "db:critical": "node ../scripts/run-critical-db-setup.js"
+    "db:critical": "node ../scripts/run-critical-db-setup.js",
+    "test:zapier:signup": "node scripts/test-zapier-webhook.js signup",
+    "test:zapier:upload": "node scripts/test-zapier-webhook.js upload",
+    "test:zapier:test": "node scripts/test-zapier-webhook.js test-completed"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
